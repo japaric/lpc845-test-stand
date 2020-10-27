@@ -26,6 +26,9 @@ pub enum Error {
 
     /// Error occurred while accessing the serial port
     Serial(serialport::Error),
+
+    // TODO remove
+    AssistantLockedError,
 }
 
 impl From<toml::de::Error> for Error {

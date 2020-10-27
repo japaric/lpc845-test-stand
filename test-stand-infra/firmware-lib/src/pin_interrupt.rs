@@ -1,6 +1,5 @@
 //! Convenient pin interrupt API
 
-
 use heapless::{
     consts::U32,
     spsc::{
@@ -17,7 +16,7 @@ use lpc8xx_hal::{
     pinint,
     pins,
 };
-
+use lpc8xx_hal::{gpio, init_state::Enabled, mrt, pinint, pins, prelude::*};
 
 /// Represents a pin interrupt
 pub struct PinInterrupt {
@@ -49,21 +48,28 @@ impl PinInterrupt {
     ///
     /// [`Int`]: struct.Int.html
     /// [`Idle`]: struct.Idle.html
-    pub fn init<I, P, T: mrt::Trait>(&mut self,
+    pub fn init<I, P, T: mrt::Trait>(
+        &mut self,
         interrupt: pinint::Interrupt<I, P, Enabled>,
-        timer:     mrt::Channel<T>,
-    )
-        -> (Int<I, P, T>, Idle)
-    {
+        timer: mrt::Channel<T>,
+    ) -> (Int<I, P, T>, Idle) {
         let (prod, cons) = self.queue.split();
 
-        let int  = Int { int: interrupt, queue: prod, timer, measuring: false };
+        let int = Int {
+            int: interrupt,
+            queue: prod,
+            timer,
+            measuring: false,
+        };
         let idle = Idle { queue: cons };
 
         (int, idle)
     }
 }
 
+// TODO idea: add DynInt with no fixed pins::Trait on init + setter?
+//      problem: pin id stiull needs to be known @ compile time for
+//      `int:       pinint::Interrupt<I, P, Enabled>,`
 
 /// Pin interrupt API for the interrupt context
 ///
@@ -72,17 +78,17 @@ impl PinInterrupt {
 ///
 /// [`PinInterrupt::init`]: struct.PinInterrupt.html#method.init
 pub struct Int<'r, I, P, T: mrt::Trait> {
-    int:       pinint::Interrupt<I, P, Enabled>,
-    queue:     Producer<'r, Event, QueueCap>,
-    timer:     mrt::Channel<T>,
+    int: pinint::Interrupt<I, P, Enabled>,
+    queue: Producer<'r, Event, QueueCap>,
+    timer: mrt::Channel<T>,
     measuring: bool,
 }
 
 impl<I, P, T> Int<'_, I, P, T>
-    where
-        I: pinint::Trait,
-        P: pins::Trait,
-        T: mrt::Trait,
+where
+    I: pinint::Trait,
+    P: pins::Trait,
+    T: mrt::Trait,
 {
     /// Handles a pin interrupts
     ///
@@ -105,16 +111,21 @@ impl<I, P, T> Int<'_, I, P, T>
         self.measuring = true;
 
         if self.int.clear_rising_edge_flag() {
-            let event = Event { level: gpio::Level::High, period };
+            let event = Event {
+                level: gpio::Level::High,
+                period,
+            };
             self.queue.enqueue(event).unwrap();
         }
         if self.int.clear_falling_edge_flag() {
-            let event = Event { level: gpio::Level::Low, period };
+            let event = Event {
+                level: gpio::Level::Low,
+                period,
+            };
             self.queue.enqueue(event).unwrap();
         }
     }
 }
-
 
 /// Pin interrupt API for a lower-priority context
 ///
@@ -141,7 +152,6 @@ impl Idle<'_> {
     }
 }
 
-
 /// A pin interrupt event
 #[derive(Debug)]
 pub struct Event {
@@ -151,7 +161,6 @@ pub struct Event {
     /// The period measured since the last event, if available
     pub period: Option<u32>,
 }
-
 
 // It would be nice to make the queue capacity configurable, but that would
 // require a generic with trait bound on all the structs. As of this writing,

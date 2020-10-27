@@ -5,4 +5,5 @@
 
 
 pub mod pin_interrupt;
+pub mod timer_interrupt;
 pub mod usart;

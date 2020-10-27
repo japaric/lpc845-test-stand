@@ -2,25 +2,19 @@
 
 
 use host_lib::assistant::AssistantError;
+use host_lib::test_stand::NotConfiguredError;
+
 use super::{
     target::{
-        TargetI2cError,
-        TargetPinReadError,
-        TargetSetPinHighError,
-        TargetSetPinLowError,
-        TargetSpiError,
-        TargetStartTimerInterruptError,
-        TargetUsartSendError,
-        TargetUsartWaitError,
+        TargetI2cError, TargetPinReadError, TargetSetPinHighError, TargetSetPinLowError,
+        TargetSpiError, TargetStartTimerInterruptError, TargetUsartSendError, TargetUsartWaitError,
         TargetWaitForAddressError,
     },
     test_stand::TestStandInitError,
 };
 
-
 /// Result type specific to this test suite
 pub type Result<T = ()> = std::result::Result<T, Error>;
-
 
 /// Error type specific to this test suite
 #[derive(Debug)]

@@ -20,6 +20,18 @@ pub struct SetLevel<Id> {
     pub level: Level,
 }
 
+/// Sent by the host to command a test node to set a pin to a specific direction
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub struct SetDirection<Id> {
+    /// The pin whose direction should be set
+    pub pin: Id,
+
+    /// The new direction of the pin
+    pub direction: Direction,
+
+    /// The initial level the pin should be set to. Ignored if `direction` is Input.
+    pub level: Option<Level>,
+}
 
 /// Sent by the host to request the current level of a pin
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, Eq, PartialEq)]
@@ -48,10 +60,18 @@ pub struct ReadLevelResult<Id> {
     pub period_ms: Option<u32>,
 }
 
-
-/// Represents the electrical level of a pin
+/// The voltage level of a pin
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub enum Level {
+    /// High voltage
     High,
+    /// Low voltage
     Low,
+}
+
+/// Represents the direction of a pin
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub enum Direction {
+    Input,
+    Output,
 }

@@ -3,14 +3,9 @@
 //! This test suite communicates with hardware. See top-level README.md for
 //! wiring instructions.
 
-
 use std::time::Duration;
 
-use lpc845_test_suite::{
-    Result,
-    TestStand,
-};
-
+use lpc845_test_suite::{Result, TestStand};
 
 #[test]
 fn it_should_start_a_transaction() -> Result {

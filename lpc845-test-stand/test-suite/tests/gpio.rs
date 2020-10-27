@@ -3,35 +3,152 @@
 //! This test suite communicates with hardware. See top-level README.md for
 //! wiring instructions.
 
+use std::thread::sleep;
+use std::time;
 
-use lpc845_test_suite::{
-    Result,
-    TestStand,
-};
+use lpc845_messages::{pin::Level, PinNumber};
+use lpc845_test_suite::assistant::{Assistant, InputPin};
+use lpc845_test_suite::{Result, TestStand};
 
+const RED_LED_PIN: PinNumber = 29;
+const GRN_LED_PIN: PinNumber = 31;
 
+// NOTE: This only works if targets green Led pin is connected to
+// assistant's pin 1 and it is not used otherwise
+// TODO remove or chnge this test; does not work with default wiring.
 #[test]
-fn it_should_set_pin_level() -> Result {
+fn assistant_should_read_noint_dyn_pin() -> Result {
+    // SETUP
+    let pin_number = 1;
     let mut test_stand = TestStand::new()?;
+    // check if direction setting works in both directions
+    let out_pin = test_stand
+        .assistant
+        .create_gpio_output_pin(pin_number, Level::Low)?;
+    let mut in_pin = out_pin.into_input_pin()?;
 
+    // TEST & ASSERT POSTCONDITION
     test_stand.target.set_pin_low()?;
-    assert!(test_stand.assistant.pin_is_low()?);
+    // ensure we don't read before the next timer tick
+    sleep(time::Duration::from_secs(1));
+    assert!(in_pin.is_low()?);
 
+    // TEST & ASSERT POSTCONDITION
     test_stand.target.set_pin_high()?;
-    assert!(test_stand.assistant.pin_is_high()?);
+    // ensure we don't read before the next timer tick
+    sleep(time::Duration::from_secs(1));
+    assert!(in_pin.is_high()?);
 
     Ok(())
 }
 
 #[test]
-fn it_should_read_input_level() -> Result {
+fn target_should_set_pin_level() -> Result {
+    // SETUP
     let mut test_stand = TestStand::new()?;
+    let mut in_pin = test_stand.assistant.create_gpio_input_pin(GRN_LED_PIN)?;
 
-    test_stand.assistant.set_pin_low()?;
+    // TEST & ASSERT POSTCONDITION
+    test_stand.target.set_pin_low()?;
+    assert!(in_pin.is_low()?);
+
+    // TEST & ASSERT POSTCONDITION
+    test_stand.target.set_pin_high()?;
+    assert!(in_pin.is_high()?);
+
+    Ok(())
+}
+
+#[test]
+fn target_should_read_input_level() -> Result {
+    // SETUP
+    let mut test_stand = TestStand::new()?;
+    let mut out_pin = test_stand
+        .assistant
+        .create_gpio_output_pin(RED_LED_PIN, Level::Low)?;
+
+    // RUN TEST
+    out_pin.set_low()?;
     assert!(test_stand.target.pin_is_low()?);
 
-    test_stand.assistant.set_pin_high()?;
+    out_pin.set_high()?;
     assert!(test_stand.target.pin_is_high()?);
+
+    Ok(())
+}
+
+#[test]
+#[allow(unused_assignments)] // to silence the last conversion
+fn assistant_red_led_should_be_toggleable_by_pin_direction() -> Result {
+    // SETUP
+    let test_stand = TestStand::new()?;
+    // ensure pin is low (-> red led is on) when we start
+    let mut out_pin = test_stand
+        .assistant
+        .create_gpio_output_pin(RED_LED_PIN, Level::Low)?;
+    let mut in_pin: InputPin<Assistant>; // we'll need this during the loop
+
+    // RUN TEST
+    for _ in 0..5 {
+        in_pin = out_pin.into_input_pin()?;
+        sleep(time::Duration::from_secs(2));
+        out_pin = in_pin.into_output_pin(Level::Low)?;
+        sleep(time::Duration::from_secs(2));
+    }
+
+    // ASSERT POSTCONDITION
+    // 👀  manually assert that led is toggling on/off every 2 secs
+
+    Ok(())
+}
+
+#[test]
+#[allow(unused_assignments)] // to silence the last conversion
+fn wonky_in_out_conversion_should_work() -> Result {
+    // SETUP
+    let mut test_stand = TestStand::new()?;
+    // ensure pin is low (-> red led is on) when we start
+    let mut out_pin = test_stand
+        .assistant
+        .create_gpio_output_pin(RED_LED_PIN, Level::Low)?;
+    assert!(test_stand.target.pin_is_low()?);
+
+    let in_pin = out_pin.into_input_pin()?;
+    sleep(time::Duration::from_secs(2));
+
+    out_pin = in_pin.into_output_pin(Level::High)?;
+    assert!(test_stand.target.pin_is_high()?);
+
+    Ok(())
+}
+
+#[test]
+fn assistant_red_led_should_be_toggleable_by_level() -> Result {
+    // SETUP
+    let test_stand = TestStand::new()?;
+    let mut out_pin = test_stand
+        .assistant
+        .create_gpio_output_pin(RED_LED_PIN, Level::Low)?;
+    out_pin.set_high()?;
+
+    // RUN TEST
+    sleep(time::Duration::from_secs(2));
+    out_pin.set_low()?;
+    sleep(time::Duration::from_secs(2));
+    out_pin.set_high()?;
+
+    sleep(time::Duration::from_secs(2));
+    out_pin.set_low()?;
+    sleep(time::Duration::from_secs(2));
+    out_pin.set_high()?;
+
+    sleep(time::Duration::from_secs(2));
+    out_pin.set_low()?;
+    sleep(time::Duration::from_secs(2));
+    out_pin.set_high()?;
+
+    // ASSERT POSTCONDITION
+    // 👀  manually assert that led is toggling on/off every 2 secs
 
     Ok(())
 }

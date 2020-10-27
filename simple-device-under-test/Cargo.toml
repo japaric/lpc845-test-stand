@@ -1,13 +1,13 @@
 [package]
-name    = "lpc845-test-assistant"
+name    = "simple-device-under-test"
 version = "0.1.0"
-authors = ["Hanno Braun <hanno@braun-embedded.com>"]
+authors = ["Lotte Steenbrink <lotte.steenbrink@ferrous-systems.com>"]
 edition = "2018"
 
 
 [dependencies]
-cortex-m-rtic = "0.5.5"
-heapless      = "0.5.6"
+cortex-m-rtic = "0.5.3"
+heapless      = "0.5.5"
 
 [dependencies.lpc845-messages]
 version  = "0.1.0"
@@ -15,7 +15,7 @@ path     = "../messages"
 
 [dependencies.firmware-lib]
 version  = "0.1.0"
-path     = "../../test-stand-infra/firmware-lib"
+path     = "../firmware-lib"
 
 [dependencies.lpc8xx-hal]
 #git      = "https://github.com/lpc-rs/lpc8xx-hal.git"
@@ -23,11 +23,11 @@ path     = "../../lpc8xx-hal"
 features = ["845m301jbd48", "845-rt"]
 
 [dependencies.panic-rtt-target]
-version  = "0.1.1"
+version  = "0.1.0"
 features = ["cortex-m"]
 
 [dependencies.rtt-target]
-version  = "0.3.0"
+version  = "0.2.0"
 features = ["cortex-m"]
 
 [dependencies.void]

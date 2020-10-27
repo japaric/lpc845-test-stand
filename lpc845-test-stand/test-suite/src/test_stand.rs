@@ -1,10 +1,7 @@
-use std::sync::{
-    LockResult,
-    MutexGuard,
-};
+use std::sync::{LockResult, MutexGuard};
 
 use host_lib::{
-    assistant::Assistant,
+    assistant::{Assistant, AssistantInterface},
     test_stand::NotConfiguredError,
 };
 
@@ -17,8 +14,8 @@ use super::target::Target;
 pub struct TestStand {
     _guard: LockResult<MutexGuard<'static, ()>>,
 
-    pub target:    Target,
-    pub assistant: Assistant,
+    pub target: Target,
+    pub assistant: AssistantInterface<Assistant>,
 }
 
 impl TestStand {
@@ -27,19 +24,19 @@ impl TestStand {
     /// Reads the `test-stand.toml` configuration file and initializes test
     /// stand resources, as configured in there.
     pub fn new() -> Result<Self, TestStandInitError> {
-        let test_stand = host_lib::TestStand::new()
-            .map_err(|err| TestStandInitError::Inner(err))?;
+        // the number of GPIO pins the test assistant has
+        let assistant_num_pins: u8 = 40; // TODO find a better place than to hardcode this here
 
-        Ok(
-            Self {
-                _guard:    test_stand.guard,
-                target:    Target::new(test_stand.target?),
-                assistant: test_stand.assistant?,
-            }
-        )
+        let test_stand =
+            host_lib::TestStand::new().map_err(|err| TestStandInitError::Inner(err))?;
+
+        Ok(Self {
+            _guard: test_stand.guard,
+            target: Target::new(test_stand.target?),
+            assistant: AssistantInterface::new(test_stand.assistant?, assistant_num_pins),
+        })
     }
 }
-
 
 #[derive(Debug)]
 pub enum TestStandInitError {
