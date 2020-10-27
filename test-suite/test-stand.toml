@@ -3,7 +3,7 @@
 # Please adapt the configuration here to reflect the realities of your setup.
 
 # Serial connection to the test target (device under test)
-target = "/dev/ttyACM0"
+target = "/dev/tty.usbmodem1302B0252"
 
 # Serial connection to the test assistant
-assistant = "/dev/ttyACM1"
+assistant = "/dev/tty.usbmodem130280422"

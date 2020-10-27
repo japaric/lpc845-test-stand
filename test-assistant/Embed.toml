@@ -3,7 +3,7 @@ usb_vid = "1fc9"
 usb_pid = "0132"
 # You need to update this to match your own hardware. See README.md for more
 # information.
-serial  = "0F01D03A"
+serial  = "13028042"
 
 [default.general]
 chip = "LPC845M301JHI48"
