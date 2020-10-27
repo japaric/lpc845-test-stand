@@ -24,7 +24,7 @@ use lpc8xx_hal::{
     gpio::{
         self,
         GpioPin,
-        direction::Output,
+        direction::{Output, Input},
     },
     i2c,
     init_state::Enabled,
@@ -129,7 +129,7 @@ const APP: () = {
         blue_idle: pin_interrupt::Idle<'static>,
 
         cts: GpioPin<PIO0_8, Output>,
-        red: GpioPin<PIO1_2, Output>,
+        red: GpioPin<PIO1_2, Input>,
 
         i2c: i2c::Slave<I2C0, Enabled<PhantomData<IOSC>>, Enabled>,
         spi: SPI<SPI0, Enabled<spi::Slave>>,
@@ -184,10 +184,7 @@ const APP: () = {
         blue_int.enable_falling_edge();
 
         // Configure pin connected to target's input pin
-        let red = p.pins.pio1_2.into_output_pin(
-            gpio.tokens.pio1_2,
-            gpio::Level::High,
-        );
+        let red = p.pins.pio1_2.into_input_pin(gpio.tokens.pio1_2);
 
         let cts = p.pins.pio0_8.into_output_pin(
             gpio.tokens.pio0_8,
@@ -508,10 +505,12 @@ const APP: () = {
                         ) => {
                             match level {
                                 pin::Level::High => {
-                                    red.set_high();
+                                    //red.set_high();
+                                    rprintln!("received red HIGH command");
                                 }
                                 pin::Level::Low => {
-                                    red.set_low();
+                                    //red.set_low();
+                                    rprintln!("received red LOW command");
                                 }
                             }
                             Ok(())

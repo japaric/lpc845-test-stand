@@ -35,3 +35,14 @@ fn it_should_read_input_level() -> Result {
 
     Ok(())
 }
+
+#[test]
+fn it_should_reconfigure_itself() -> Result {
+    let mut test_stand = TestStand::new()?;
+
+    test_stand.assistant.set_pin_low()?;
+    test_stand.assistant.set_pin_high()?;
+    //assert!(test_stand.target.pin_is_low()?);
+
+    Ok(())
+}
