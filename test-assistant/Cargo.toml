@@ -18,7 +18,8 @@ version  = "0.1.0"
 path     = "../firmware-lib"
 
 [dependencies.lpc8xx-hal]
-git      = "https://github.com/lpc-rs/lpc8xx-hal.git"
+#git      = "https://github.com/lpc-rs/lpc8xx-hal.git"
+path     = "../../lpc8xx-hal"
 features = ["845m301jbd48", "845-rt"]
 
 [dependencies.panic-rtt-target]
