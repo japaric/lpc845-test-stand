@@ -3,6 +3,8 @@
 //! This test suite communicates with hardware. See top-level README.md for
 //! wiring instructions.
 
+use std::thread::sleep;
+use std::time;
 
 use lpc845_test_suite::{
     Result,
@@ -51,7 +53,23 @@ fn red_should_light_up_on_low() -> Result {
     let mut test_stand = TestStand::new()?;
 
     test_stand.assistant.set_pin_low()?;
-    // 👀  manually assert that on-board led is red
+
+    // 👀  manually assert that on-board led is red after 5 secs
+
+    Ok(())
+}
+
+#[test]
+fn toggle_direction_should_turn_off_red_led() -> Result {
+    let mut test_stand = TestStand::new()?;
+
+    // TODO set pin low (-> led on) and assert here once I've written the custom toggle command
+    sleep(time::Duration::from_secs(5));
+
+    // TODO use tbd custom command instead here
+    test_stand.assistant.set_pin_low()?;
+
+    // 👀  manually assert that on-board led is off after 5 secs
 
     Ok(())
 }

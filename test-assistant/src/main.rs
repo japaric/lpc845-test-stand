@@ -440,7 +440,7 @@ const APP: () = {
         let green          = cx.resources.green_idle;
         let blue           = cx.resources.blue_idle;
         let rts            = cx.resources.target_rts_idle;
-        let _red            = cx.resources.red;
+        let red            = cx.resources.red;
         let cts            = cx.resources.cts;
 
         let mut pins = FnvIndexMap::<_, _, U4>::new();
@@ -506,12 +506,15 @@ const APP: () = {
                         ) => {
                             match level {
                                 pin::Level::High => {
-                                    //red.set_high();
+                                    red.set_high();
                                     rprintln!("received red HIGH command");
                                 }
                                 pin::Level::Low => {
                                     //red.set_low();
-                                    rprintln!("received red LOW command");
+                                    rprintln!("received red LOW command. Get ready to toggle!");
+                                    // this should turn red OFF despite Level being low as it's
+                                    // set to output now
+                                    red.toggle_direction(gpio::Level::Low);
                                 }
                             }
                             Ok(())
