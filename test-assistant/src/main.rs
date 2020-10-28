@@ -99,6 +99,40 @@ use lpc845_messages::{
     pin,
 };
 
+pub struct DynamicDirectionRed {
+    is_output: bool, // TODO bad style, refactor
+    // note to self: I think I only need one Gpiopin instance that can somehow switch its type
+    // -> is this wehre type erasure comes in?
+    input_pin: Option<GpioPin<PIO1_2, gpio::direction::Input>>,
+    output_pin: Option<GpioPin<PIO1_2, gpio::direction::Output>>,
+}
+
+impl DynamicDirectionRed {
+    pub fn new() -> DynamicDirectionRed{
+        DynamicDirectionRed{ is_output: true, input_pin: None, output_pin: None }
+    }
+
+    pub fn set_pin(&mut self, pin: GpioPin<PIO1_2, gpio::direction::Output>) {
+        // assuming after init -> is_output = true
+        self.output_pin = Some(pin);
+    }
+
+    pub fn into_input(&mut self) {
+        match &self.output_pin {
+            Some(pin) => {
+                let foo = *pin.into_input();
+            }
+            None => {}
+        }
+        /*
+        if self.output_pin.is_some() {
+            let Some(foo ) = self.output_pin.as_ref();
+            self.input_pin = Some(foo.into_input());
+            self.output_pin = None;
+            self.is_output = false;
+        }*/
+    }
+}
 
 #[rtic::app(device = lpc8xx_hal::pac)]
 const APP: () = {
@@ -129,7 +163,7 @@ const APP: () = {
         blue_idle: pin_interrupt::Idle<'static>,
 
         cts: GpioPin<PIO0_8, Output>,
-        red: GpioPin<PIO1_2, Input>,
+        red: DynamicDirectionRed,
 
         i2c: i2c::Slave<I2C0, Enabled<PhantomData<IOSC>>, Enabled>,
         spi: SPI<SPI0, Enabled<spi::Slave>>,
@@ -184,7 +218,20 @@ const APP: () = {
         blue_int.enable_falling_edge();
 
         // Configure pin connected to target's input pin
-        let red = p.pins.pio1_2.into_input_pin(gpio.tokens.pio1_2);
+        //let red = p.pins.pio1_2.into_input_pin(gpio.tokens.pio1_2);
+        //red.into_output(gpio::Level::Low);
+        /*
+        let red = p.pins.pio1_2.into_output_pin(
+            gpio.tokens.pio1_2,
+            gpio::Level::High,
+        );
+        */
+
+        let mut red = DynamicDirectionRed::new();
+        red.set_pin(p.pins.pio1_2.into_output_pin(
+            gpio.tokens.pio1_2,
+            gpio::Level::High, // light is off on init
+        ));
 
         let cts = p.pins.pio0_8.into_output_pin(
             gpio.tokens.pio0_8,

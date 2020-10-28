@@ -9,7 +9,6 @@ use lpc845_test_suite::{
     TestStand,
 };
 
-
 #[test]
 fn it_should_set_pin_level() -> Result {
     let mut test_stand = TestStand::new()?;
@@ -43,6 +42,16 @@ fn it_should_reconfigure_itself() -> Result {
     test_stand.assistant.set_pin_low()?;
     test_stand.assistant.set_pin_high()?;
     //assert!(test_stand.target.pin_is_low()?);
+
+    Ok(())
+}
+
+#[test]
+fn red_should_light_up_on_low() -> Result {
+    let mut test_stand = TestStand::new()?;
+
+    test_stand.assistant.set_pin_low()?;
+    // 👀  manually assert that on-board led is red
 
     Ok(())
 }
