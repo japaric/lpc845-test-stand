@@ -9,6 +9,7 @@ use super::{
         AssistantPinReadError,
         AssistantSetPinHighError,
         AssistantSetPinLowError,
+        AssistantSetPinDirectionInputError,
         AssistantUsartSendError,
         AssistantUsartWaitError,
     },
@@ -38,6 +39,7 @@ pub enum Error {
     AssistantPinRead(AssistantPinReadError),
     AssistantSetPinHigh(AssistantSetPinHighError),
     AssistantSetPinLow(AssistantSetPinLowError),
+    AssistantSetPinDirectionInput(AssistantSetPinDirectionInputError),
     AssistantUsartSend(AssistantUsartSendError),
     AssistantUsartWait(AssistantUsartWaitError),
     NotConfigured(NotConfiguredError),
@@ -74,6 +76,12 @@ impl From<AssistantSetPinHighError> for Error {
 impl From<AssistantSetPinLowError> for Error {
     fn from(err: AssistantSetPinLowError) -> Self {
         Self::AssistantSetPinLow(err)
+    }
+}
+
+impl From<AssistantSetPinDirectionInputError> for Error {
+    fn from(err: AssistantSetPinDirectionInputError) -> Self {
+        Self::AssistantSetPinDirectionInput(err)
     }
 }
 

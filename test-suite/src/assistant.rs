@@ -66,6 +66,17 @@ impl Assistant {
             .map_err(|err| AssistantSetPinLowError(err))
     }
 
+    // TODO make more generic: enable test to apply this to all pins, not just red
+    // (same for set_pin* needed then I guess?)
+    pub fn set_pin_direction_input(&mut self) -> Result<(), AssistantSetPinDirectionInputError> {
+        self.red_led
+            .set_direction::<HostToAssistant>(
+                pin::Direction::Input,
+                &mut self.conn
+            )
+            .map_err(|err| AssistantSetPinDirectionInputError(err))
+    }
+
     /// Instruct the assistant to disable CTS
     pub fn disable_cts(&mut self) -> Result<(), AssistantSetPinHighError> {
         self.cts
@@ -319,6 +330,9 @@ pub struct AssistantSetPinHighError(ConnSendError);
 
 #[derive(Debug)]
 pub struct AssistantSetPinLowError(ConnSendError);
+
+#[derive(Debug)]
+pub struct AssistantSetPinDirectionInputError(ConnSendError);
 
 #[derive(Debug)]
 pub struct AssistantPinReadError(ReadLevelError);

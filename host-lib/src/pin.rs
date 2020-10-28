@@ -61,6 +61,22 @@ impl<Id> Pin<Id>
         Ok(())
     }
 
+    /// Commands the node to change pin direction
+    pub fn set_direction<M>(&mut self,
+        direction: pin::Direction,
+        conn: &mut Conn,
+    )
+        -> Result<(), ConnSendError>
+        where
+            M: From<pin::SetDirection<Id>> + Serialize,
+    {
+        let command = pin::SetDirection { pin: self.pin, direction };
+        let message: M = command.into();
+        conn.send(&message)?;
+
+        Ok(())
+    }
+
     /// Read level for the given pin
     ///
     /// Receives from `conn`, expecting to receive a "level changed" message.

@@ -20,6 +20,16 @@ pub struct SetLevel<Id> {
     pub level: Level,
 }
 
+/// Sent by the host to command a test node to set a pin to a specific direction
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub struct SetDirection<Id> {
+    /// The pin whose level should be set
+    pub pin: Id,
+
+    /// The new direction of the pin
+    pub direction: Direction,
+}
+
 
 /// Sent by the host to request the current level of a pin
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, Eq, PartialEq)]
@@ -54,4 +64,11 @@ pub struct ReadLevelResult<Id> {
 pub enum Level {
     High,
     Low,
+}
+
+/// Represents the direction of a pin
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub enum Direction {
+    Input,
+    Output,
 }

@@ -38,17 +38,6 @@ fn it_should_read_input_level() -> Result {
 }
 
 #[test]
-fn it_should_reconfigure_itself() -> Result {
-    let mut test_stand = TestStand::new()?;
-
-    test_stand.assistant.set_pin_low()?;
-    test_stand.assistant.set_pin_high()?;
-    //assert!(test_stand.target.pin_is_low()?);
-
-    Ok(())
-}
-
-#[test]
 fn red_should_light_up_on_low() -> Result {
     let mut test_stand = TestStand::new()?;
 
@@ -63,11 +52,12 @@ fn red_should_light_up_on_low() -> Result {
 fn toggle_direction_should_turn_off_red_led() -> Result {
     let mut test_stand = TestStand::new()?;
 
-    // TODO set pin low (-> led on) and assert here once I've written the custom toggle command
+    // setup: ensure pin is low (-> red led is on) when we start
+    test_stand.assistant.set_pin_low()?;
     sleep(time::Duration::from_secs(5));
 
-    // TODO use tbd custom command instead here
-    test_stand.assistant.set_pin_low()?;
+    // run test
+    test_stand.assistant.set_pin_direction_input()?;
 
     // 👀  manually assert that on-board led is off after 5 secs
 

@@ -30,6 +30,8 @@ pub enum HostToTarget<'r> {
     /// Ask the target for the current level of the input pin
     ReadPin(pin::ReadLevel<()>),
 
+    // todo add SetLevel for HostToTarget as well?
+
     /// Instruct the target to start the timer interrupt
     StartTimerInterrupt { period_ms: u32 },
 
@@ -120,11 +122,21 @@ pub enum HostToAssistant<'r> {
 
     /// Ask the assistant for the current level of a pin
     ReadPin(pin::ReadLevel<InputPin>),
+
+    /// TODO add docs
+    SetDirection(pin::SetDirection<OutputPin>),
 }
 
 impl From<pin::SetLevel<OutputPin>> for HostToAssistant<'_> {
     fn from(set_level: pin::SetLevel<OutputPin>) -> Self {
         Self::SetPin(set_level)
+    }
+}
+
+// TODO also do this for inputpins?
+impl From<pin::SetDirection<OutputPin>> for HostToAssistant<'_> {
+    fn from(set_direction: pin::SetDirection<OutputPin>) -> Self {
+        Self::SetDirection(set_direction)
     }
 }
 

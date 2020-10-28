@@ -506,15 +506,13 @@ const APP: () = {
                         ) => {
                             match level {
                                 pin::Level::High => {
-                                    red.set_high();
                                     rprintln!("received red HIGH command");
+                                    red.set_high();
                                 }
                                 pin::Level::Low => {
+                                    rprintln!("received red LOW command");
+                                    // note: set_low() is not implemented for dynamic pins yet :D
                                     //red.set_low();
-                                    rprintln!("received red LOW command. Get ready to toggle!");
-                                    // this should turn red OFF despite Level being low as it's
-                                    // set to output now
-                                    red.toggle_direction(gpio::Level::Low);
                                 }
                             }
                             Ok(())
@@ -560,6 +558,19 @@ const APP: () = {
 
                             Ok(())
                         }
+                        HostToAssistant::SetDirection(
+                            pin::SetDirection { pin: OutputPin::Red , direction }
+                        ) => {
+                            rprintln!("received SET DIRECTION command. Get ready to toggle!");
+                            // TODO actually inspect `direction` and act accordingly
+                            red.toggle_direction(gpio::Level::Low);
+                            Ok(())
+                        },
+                        HostToAssistant::SetDirection( _ ) => {
+                            rprintln!("received SET DIRECTION command for unsupported pin");
+                            // TODO support all pins
+                            unimplemented!()
+                        },
                     }
                 })
                 .expect("Error processing host request");
