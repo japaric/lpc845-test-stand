@@ -500,7 +500,7 @@ const APP: () = {
                         }
                         HostToAssistant::SetPin(
                             pin::SetLevel {
-                                pin: OutputPin::Red,
+                                pin: OutputPin::Dynamic,
                                 level,
                             }
                         ) => {
@@ -536,7 +536,10 @@ const APP: () = {
                             rprintln!("Setting CTS LOW");
                             cts.set_low();
                             Ok(())
-                        }
+                        },
+                        HostToAssistant::SetPin(_) => {
+                            unimplemented!()
+                        },
                         HostToAssistant::ReadPin(
                             pin::ReadLevel { pin }
                         ) => {
@@ -559,12 +562,21 @@ const APP: () = {
                             Ok(())
                         }
                         HostToAssistant::SetDirection(
-                            pin::SetDirection { pin: OutputPin::Red , direction }
+                            pin::SetDirection { pin: OutputPin::Dynamic , direction }
                         ) => {
                             rprintln!("received SET DIRECTION command. Get ready to toggle!");
-                            // TODO actually inspect `direction` and act accordingly
-                            red.toggle_direction(gpio::Level::Low);
-                            Ok(())
+                            match direction {
+                                pin::Direction::Input => {
+                                    rprintln!("switching to INPUT");
+                                    red.switch_to_input();
+                                    Ok(())
+                                }
+                                pin::Direction::Output => {
+                                    rprintln!("switching to OUTPUT; Level LOW (led on)");
+                                    red.switch_to_output(gpio::Level::Low);
+                                    Ok(())
+                                }
+                            }
                         },
                         HostToAssistant::SetDirection( _ ) => {
                             rprintln!("received SET DIRECTION command for unsupported pin");

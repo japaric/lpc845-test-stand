@@ -38,7 +38,7 @@ impl Assistant {
     pub(crate) fn new(conn: Conn) -> Self {
         Self {
             conn,
-            red_led: Pin::new(OutputPin::Red),
+            red_led: Pin::new(OutputPin::Dynamic),
             green_led: Pin::new(InputPin::Green),
             blue_led: Pin::new(InputPin::Blue),
             cts: Pin::new(OutputPin::Cts),
@@ -67,7 +67,7 @@ impl Assistant {
     }
 
     // TODO make more generic: enable test to apply this to all pins, not just red
-    // (same for set_pin* needed then I guess?)
+    // (same for set_pin_low()/set_pin_high() needed then I guess?)
     pub fn set_pin_direction_input(&mut self) -> Result<(), AssistantSetPinDirectionInputError> {
         self.red_led
             .set_direction::<HostToAssistant>(
@@ -76,6 +76,18 @@ impl Assistant {
             )
             .map_err(|err| AssistantSetPinDirectionInputError(err))
     }
+
+    // TODO make more generic: enable test to apply this to all pins, not just red
+    // (same for set_pin_low()/set_pin_high() needed then I guess?)
+    pub fn set_pin_direction_output(&mut self) -> Result<(), AssistantSetPinDirectionOutputError> {
+        self.red_led
+            .set_direction::<HostToAssistant>(
+                pin::Direction::Output,
+                &mut self.conn
+            )
+            .map_err(|err| AssistantSetPinDirectionOutputError(err))
+    }
+
 
     /// Instruct the assistant to disable CTS
     pub fn disable_cts(&mut self) -> Result<(), AssistantSetPinHighError> {
@@ -333,6 +345,9 @@ pub struct AssistantSetPinLowError(ConnSendError);
 
 #[derive(Debug)]
 pub struct AssistantSetPinDirectionInputError(ConnSendError);
+
+#[derive(Debug)]
+pub struct AssistantSetPinDirectionOutputError(ConnSendError);
 
 #[derive(Debug)]
 pub struct AssistantPinReadError(ReadLevelError);

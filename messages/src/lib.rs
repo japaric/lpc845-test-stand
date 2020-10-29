@@ -206,4 +206,5 @@ pub enum InputPin {
 pub enum OutputPin {
     Cts,
     Red,
+    Dynamic // TODO refactor into own enum or other less hacky solution
 }
