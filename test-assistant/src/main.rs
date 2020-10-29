@@ -511,8 +511,7 @@ const APP: () = {
                                 }
                                 pin::Level::Low => {
                                     rprintln!("received red LOW command");
-                                    // note: set_low() is not implemented for dynamic pins yet :D
-                                    //red.set_low();
+                                    red.set_low();
                                 }
                             }
                             Ok(())

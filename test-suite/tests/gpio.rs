@@ -49,17 +49,52 @@ fn red_should_light_up_on_low() -> Result {
 }
 
 #[test]
-fn toggle_direction_should_turn_off_red_led() -> Result {
+fn red_led_should_be_toggleable_by_pin_direction() -> Result {
+    // SETUP
+    let mut test_stand = TestStand::new()?;
+    // ensure pin is low (-> red led is on) when we start
+    test_stand.assistant.set_pin_low()?;
+
+    // RUN TEST
+    for n in 0..10 {
+        sleep(time::Duration::from_secs(2));
+
+        // toggle back and forth between in/output
+        if n % 2 == 0 {
+            test_stand.assistant.set_pin_direction_input()?;
+        } else {
+            test_stand.assistant.set_pin_direction_output()?;
+        }
+    }
+
+    // ASSERT POSTCONDITION
+    // 👀  manually assert that led is toggling on/off 10 times every 2 secs
+
+    Ok(())
+}
+
+#[test]
+fn red_led_should_be_toggleable_by_level() -> Result {
+    // SETUP
     let mut test_stand = TestStand::new()?;
 
-    // setup: ensure pin is low (-> red led is on) when we start
-    test_stand.assistant.set_pin_low()?;
-    sleep(time::Duration::from_secs(5));
+    // RUN TEST
+    for n in 0..10 {
+        sleep(time::Duration::from_secs(2));
 
-    // run test
-    test_stand.assistant.set_pin_direction_input()?;
+        // toggle back and forth between in/output
+        if n % 2 == 0 {
+            test_stand.assistant.set_pin_low()?;
+            // TODO: why does this check blue led Levels and not red?
+            //assert!(test_stand.assistant.pin_is_low()?);
+        } else {
+            test_stand.assistant.set_pin_high()?;
+            //assert!(test_stand.target.pin_is_high()?);
+        }
+    }
 
-    // 👀  manually assert that on-board led is off after 5 secs
+    // ASSERT POSTCONDITION
+    // 👀  manually assert that led is toggling on/off 10 times every 2 secs
 
     Ok(())
 }
