@@ -19,6 +19,7 @@ use lpc845_messages::{
     HostToAssistant,
     InputPin,
     OutputPin,
+    DynamicPin,
     UsartMode,
     pin,
 };
@@ -32,6 +33,7 @@ pub struct Assistant {
     blue_led: Pin<InputPin>,
     cts: Pin<OutputPin>,
     rts: Pin<InputPin>,
+    dynamic_pin: Pin<DynamicPin>, // TODO how do I handle >1 dyn pin, will this still work or is it stateful?
 }
 
 impl Assistant {
@@ -43,6 +45,7 @@ impl Assistant {
             blue_led: Pin::new(InputPin::Blue),
             cts: Pin::new(OutputPin::Cts),
             rts: Pin::new(InputPin::Rts),
+            dynamic_pin: Pin::new(DynamicPin::Red),
         }
     }
 
@@ -69,18 +72,18 @@ impl Assistant {
     // TODO make more generic: enable test to apply this to all pins, not just red
     // (same for set_pin_low()/set_pin_high() needed then I guess?)
     pub fn set_pin_direction_input(&mut self) -> Result<(), AssistantSetPinDirectionInputError> {
-        self.red_led
+        self.dynamic_pin
             .set_direction::<HostToAssistant>(
                 pin::Direction::Input,
                 &mut self.conn
             )
             .map_err(|err| AssistantSetPinDirectionInputError(err))
-    }
+        }
 
     // TODO make more generic: enable test to apply this to all pins, not just red
     // (same for set_pin_low()/set_pin_high() needed then I guess?)
     pub fn set_pin_direction_output(&mut self) -> Result<(), AssistantSetPinDirectionOutputError> {
-        self.red_led
+        self.dynamic_pin
             .set_direction::<HostToAssistant>(
                 pin::Direction::Output,
                 &mut self.conn

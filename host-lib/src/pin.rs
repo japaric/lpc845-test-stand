@@ -62,6 +62,8 @@ impl<Id> Pin<Id>
     }
 
     /// Commands the node to change pin direction
+    ///
+    /// TODO more detailed docs?
     pub fn set_direction<M>(&mut self,
         direction: pin::Direction,
         conn: &mut Conn,

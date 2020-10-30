@@ -95,6 +95,7 @@ use lpc845_messages::{
     HostToAssistant,
     InputPin,
     OutputPin,
+    DynamicPin,
     UsartMode,
     pin,
 };
@@ -564,7 +565,8 @@ const APP: () = {
                             Ok(())
                         }
                         HostToAssistant::SetDirection(
-                            pin::SetDirection { pin: OutputPin::Dynamic , direction }
+                            // TODO convert to generic pin support
+                            pin::SetDirection { pin: DynamicPin::Red , direction }
                         ) => {
                             rprintln!("received SET DIRECTION command. Get ready to toggle!");
                             match direction {
@@ -579,11 +581,6 @@ const APP: () = {
                                     Ok(())
                                 }
                             }
-                        },
-                        HostToAssistant::SetDirection( _ ) => {
-                            rprintln!("received SET DIRECTION command for unsupported pin");
-                            // TODO support all pins
-                            unimplemented!()
                         },
                         HostToAssistant::SetDynamicPin(_) => {todo!()}
                         HostToAssistant::ReadDynamicPin(_) => {todo!()}
