@@ -84,7 +84,7 @@ fn dynamic_red_led_should_be_toggleable_by_pin_direction() -> Result {
 fn dynamic_red_led_should_be_toggleable_by_level() -> Result {
     // SETUP
     let mut test_stand = TestStand::new()?;
-    test_stand.assistant.set_pin_direction_input()?;
+    test_stand.assistant.set_pin_direction_output()?;
 
     // RUN TEST
     for n in 0..10 {
