@@ -24,7 +24,7 @@ use lpc8xx_hal::{
     gpio::{
         self,
         GpioPin,
-        direction::{Output, Input, Dynamic},
+        direction::{Output, Dynamic},
     },
     i2c,
     init_state::Enabled,
@@ -542,6 +542,9 @@ const APP: () = {
                         HostToAssistant::ReadPin(
                             pin::ReadLevel { pin }
                         ) => {
+                            rprintln!("HostToAssistant::ReadPin started");
+                            rprintln!("{:?}", pins);
+
                             let result = pins.get(&(pin as usize))
                                 .map(|&(level, period_ms)| {
                                     pin::ReadLevelResult {
@@ -582,6 +585,8 @@ const APP: () = {
                             // TODO support all pins
                             unimplemented!()
                         },
+                        HostToAssistant::SetDynamicPin(_) => {todo!()}
+                        HostToAssistant::ReadDynamicPin(_) => {todo!()}
                     }
                 })
                 .expect("Error processing host request");

@@ -123,20 +123,21 @@ pub enum HostToAssistant<'r> {
     /// Ask the assistant for the current level of a pin
     ReadPin(pin::ReadLevel<InputPin>),
 
+    // TODO: can I merge these getters/setters?
+
+    /// Instruct the assistant to change level of the target's dynamic pin if direction is input
+    SetDynamicPin(pin::SetLevel<DynamicPin>),
+
+    /// Ask the assistant for the current level of a dynamic pin if direction is output
+    ReadDynamicPin(pin::ReadLevel<DynamicPin>),
+
     /// TODO add docs
-    SetDirection(pin::SetDirection<OutputPin>),
+    SetDirection(pin::SetDirection<OutputPin>), // TODO move to DynamicPin instead
 }
 
 impl From<pin::SetLevel<OutputPin>> for HostToAssistant<'_> {
     fn from(set_level: pin::SetLevel<OutputPin>) -> Self {
         Self::SetPin(set_level)
-    }
-}
-
-// TODO also do this for inputpins?
-impl From<pin::SetDirection<OutputPin>> for HostToAssistant<'_> {
-    fn from(set_direction: pin::SetDirection<OutputPin>) -> Self {
-        Self::SetDirection(set_direction)
     }
 }
 
@@ -146,6 +147,23 @@ impl From<pin::ReadLevel<InputPin>> for HostToAssistant<'_> {
     }
 }
 
+impl From<pin::SetDirection<OutputPin>> for HostToAssistant<'_> {
+    fn from(set_direction: pin::SetDirection<OutputPin>) -> Self {
+        Self::SetDirection(set_direction)
+    }
+}
+
+impl From<pin::SetLevel<DynamicPin>> for HostToAssistant<'_> {
+    fn from(set_level: pin::SetLevel<DynamicPin>) -> Self {
+        Self::SetDynamicPin(set_level)
+    }
+}
+
+impl From<pin::ReadLevel<DynamicPin>> for HostToAssistant<'_> {
+    fn from(read_level: pin::ReadLevel<DynamicPin>) -> Self {
+        Self::ReadDynamicPin(read_level)
+    }
+}
 
 /// A message from the test assistant to the test suite on the host
 #[derive(Debug, Deserialize, Serialize)]
@@ -160,6 +178,8 @@ pub enum AssistantToHost<'r> {
     ReadPinResult(Option<pin::ReadLevelResult<InputPin>>),
 }
 
+
+// todo adapt for dynamic pin too?
 impl<'r> TryFrom<AssistantToHost<'r>> for pin::ReadLevelResult<InputPin> {
     type Error = AssistantToHost<'r>;
 
@@ -205,6 +225,12 @@ pub enum InputPin {
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub enum OutputPin {
     Cts,
-    Red,
-    Dynamic // TODO refactor into own enum or other less hacky solution
+    Red, // TODO rm
+    Dynamic, // TODO rm
+}
+
+/// Represents one of the pins that the assistant can (re)configure at runtime
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub enum DynamicPin {
+    Red, // TODO add other pins here??
 }

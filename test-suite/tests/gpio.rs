@@ -16,7 +16,7 @@ fn it_should_set_pin_level() -> Result {
     let mut test_stand = TestStand::new()?;
 
     test_stand.target.set_pin_low()?;
-    assert!(test_stand.assistant.pin_is_low()?);
+    assert!(test_stand.assistant.pin_is_low()?); // TODO fix this test
 
     test_stand.target.set_pin_high()?;
     assert!(test_stand.assistant.pin_is_high()?);
@@ -77,16 +77,17 @@ fn red_led_should_be_toggleable_by_pin_direction() -> Result {
 fn red_led_should_be_toggleable_by_level() -> Result {
     // SETUP
     let mut test_stand = TestStand::new()?;
+    test_stand.assistant.set_pin_direction_input()?;
 
     // RUN TEST
     for n in 0..10 {
         sleep(time::Duration::from_secs(2));
 
-        // toggle back and forth between in/output
+        // toggle back and forth between high/low
         if n % 2 == 0 {
             test_stand.assistant.set_pin_low()?;
             // TODO: why does this check blue led Levels and not red?
-            //assert!(test_stand.assistant.pin_is_low()?);
+            assert!(test_stand.assistant.pin_is_low()?);
         } else {
             test_stand.assistant.set_pin_high()?;
             //assert!(test_stand.target.pin_is_high()?);
