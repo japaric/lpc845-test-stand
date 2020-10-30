@@ -50,7 +50,7 @@ impl Assistant {
     }
 
     /// Instruct the assistant to set the target's input pin high
-    pub fn set_pin_high(&mut self) -> Result<(), AssistantSetPinHighError> {
+    pub fn set_output_pin_highset_pin_high(&mut self) -> Result<(), AssistantSetPinHighError> {
         self.red_led
             .set_level::<HostToAssistant>(
                 pin::Level::High,
@@ -71,6 +71,7 @@ impl Assistant {
 
     // TODO make more generic: enable test to apply this to all pins, not just red
     // (same for set_pin_low()/set_pin_high() needed then I guess?)
+    /// TODO add docs
     pub fn set_pin_direction_input(&mut self) -> Result<(), AssistantSetPinDirectionInputError> {
         self.dynamic_pin
             .set_direction::<HostToAssistant>(
@@ -82,6 +83,7 @@ impl Assistant {
 
     // TODO make more generic: enable test to apply this to all pins, not just red
     // (same for set_pin_low()/set_pin_high() needed then I guess?)
+    /// TODO add docs
     pub fn set_pin_direction_output(&mut self) -> Result<(), AssistantSetPinDirectionOutputError> {
         self.dynamic_pin
             .set_direction::<HostToAssistant>(
@@ -91,6 +93,27 @@ impl Assistant {
             .map_err(|err| AssistantSetPinDirectionOutputError(err))
     }
 
+    // TODO make more generic: enable test to apply this to all pins, not just red
+    /// TODO add docs
+    pub fn set_output_pin_high(&mut self) -> Result<(), AssistantSetPinHighError> {
+        self.dynamic_pin
+            .set_level::<HostToAssistant>(
+                pin::Level::High,
+                &mut self.conn,
+            )
+            .map_err(|err| AssistantSetPinHighError(err))
+    }
+
+    // TODO make more generic: enable test to apply this to all pins, not just red
+    /// TODO add docs
+    pub fn set_output_pin_low(&mut self) -> Result<(), AssistantSetPinLowError> {
+        self.dynamic_pin
+            .set_level::<HostToAssistant>(
+                pin::Level::Low,
+                &mut self.conn,
+            )
+            .map_err(|err| AssistantSetPinLowError(err))
+    }
 
     /// Instruct the assistant to disable CTS
     pub fn disable_cts(&mut self) -> Result<(), AssistantSetPinHighError> {

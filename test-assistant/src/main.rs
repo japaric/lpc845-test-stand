@@ -536,10 +536,28 @@ const APP: () = {
                             rprintln!("Setting CTS LOW");
                             cts.set_low();
                             Ok(())
-                        },
+                        }
                         HostToAssistant::SetPin(_) => {
                             unimplemented!()
-                        },
+                        }
+                        HostToAssistant::SetDynamicPin(
+                            pin::SetLevel {
+                                pin: DynamicPin::Red, // TODO apply to all pins
+                                level,
+                            }
+                        ) => {
+                            match level {
+                                pin::Level::High => {
+                                    rprintln!("received dynamic red HIGH command");
+                                    red.set_high();
+                                }
+                                pin::Level::Low => {
+                                    rprintln!("received dynamic red LOW command");
+                                    red.set_low();
+                                }
+                            }
+                            Ok(())
+                        }
                         HostToAssistant::ReadPin(
                             pin::ReadLevel { pin }
                         ) => {
@@ -582,7 +600,6 @@ const APP: () = {
                                 }
                             }
                         },
-                        HostToAssistant::SetDynamicPin(_) => {todo!()}
                         HostToAssistant::ReadDynamicPin(_) => {todo!()}
                     }
                 })
