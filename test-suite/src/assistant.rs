@@ -50,7 +50,7 @@ impl Assistant {
     }
 
     /// Instruct the assistant to set the target's input pin high
-    pub fn set_output_pin_highset_pin_high(&mut self) -> Result<(), AssistantSetPinHighError> {
+    pub fn set_pin_high(&mut self) -> Result<(), AssistantSetPinHighError> {
         self.red_led
             .set_level::<HostToAssistant>(
                 pin::Level::High,

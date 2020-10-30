@@ -11,7 +11,6 @@ use lpc845_test_suite::{
     TestStand,
 };
 
-/*
 #[test]
 fn it_should_set_pin_level() -> Result {
     let mut test_stand = TestStand::new()?;
@@ -37,7 +36,6 @@ fn it_should_read_input_level() -> Result {
 
     Ok(())
 }
-*/
 
 #[test]
 fn dynamic_red_led_should_light_up_on_low() -> Result {
