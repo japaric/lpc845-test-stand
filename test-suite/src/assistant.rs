@@ -72,47 +72,64 @@ impl Assistant {
     // TODO make more generic: enable test to apply this to all pins, not just red
     // (same for set_pin_low()/set_pin_high() needed then I guess?)
     /// TODO add docs
-    pub fn set_pin_direction_input(&mut self) -> Result<(), AssistantSetPinDirectionInputError> {
-        self.dynamic_pin
-            .set_direction::<HostToAssistant>(
-                pin::Direction::Input,
-                &mut self.conn
-            )
-            .map_err(|err| AssistantSetPinDirectionInputError(err))
+    pub fn set_pin_direction_input(&mut self, pin: DynamicPin) -> Result<(), AssistantSetPinDirectionInputError> {
+        match pin {
+            DynamicPin::Red => {
+                self.dynamic_pin
+                .set_direction::<HostToAssistant>(
+                    pin::Direction::Input,
+                    &mut self.conn
+                )
+                .map_err(|err| AssistantSetPinDirectionInputError(err))
+            }
         }
+    }
 
     // TODO make more generic: enable test to apply this to all pins, not just red
     // (same for set_pin_low()/set_pin_high() needed then I guess?)
     /// TODO add docs
-    pub fn set_pin_direction_output(&mut self) -> Result<(), AssistantSetPinDirectionOutputError> {
-        self.dynamic_pin
-            .set_direction::<HostToAssistant>(
-                pin::Direction::Output,
-                &mut self.conn
-            )
-            .map_err(|err| AssistantSetPinDirectionOutputError(err))
+    pub fn set_pin_direction_output(&mut self, pin: DynamicPin) -> Result<(), AssistantSetPinDirectionOutputError> {
+        match pin {
+            DynamicPin::Red => {
+                self.dynamic_pin
+                .set_direction::<HostToAssistant>(
+                    pin::Direction::Output,
+                    &mut self.conn
+                )
+                .map_err(|err| AssistantSetPinDirectionOutputError(err))
+            }
+        }
     }
 
     // TODO make more generic: enable test to apply this to all pins, not just red
     /// TODO add docs
-    pub fn set_output_pin_high(&mut self) -> Result<(), AssistantSetPinHighError> {
-        self.dynamic_pin
-            .set_level::<HostToAssistant>(
-                pin::Level::High,
-                &mut self.conn,
-            )
-            .map_err(|err| AssistantSetPinHighError(err))
+    pub fn set_output_pin_high(&mut self, pin: DynamicPin) -> Result<(), AssistantSetPinHighError> {
+        // TODO assert that pin is in output direction
+        match pin {
+            DynamicPin::Red => {
+                self.dynamic_pin
+                .set_level::<HostToAssistant>(
+                    pin::Level::High,
+                    &mut self.conn,
+                )
+                .map_err(|err| AssistantSetPinHighError(err))
+            }
+        }
     }
 
     // TODO make more generic: enable test to apply this to all pins, not just red
     /// TODO add docs
-    pub fn set_output_pin_low(&mut self) -> Result<(), AssistantSetPinLowError> {
-        self.dynamic_pin
-            .set_level::<HostToAssistant>(
-                pin::Level::Low,
-                &mut self.conn,
-            )
-            .map_err(|err| AssistantSetPinLowError(err))
+    pub fn set_output_pin_low(&mut self, pin: DynamicPin) -> Result<(), AssistantSetPinLowError> {
+        match pin {
+            DynamicPin::Red => {
+                self.dynamic_pin
+                .set_level::<HostToAssistant>(
+                    pin::Level::Low,
+                    &mut self.conn,
+                )
+                .map_err(|err| AssistantSetPinLowError(err))
+            }
+        }
     }
 
     /// Instruct the assistant to disable CTS
