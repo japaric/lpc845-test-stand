@@ -166,6 +166,9 @@ const APP: () = {
 
         let mut swm_handle = swm.handle.enable(&mut syscon.handle);
 
+        // TODO: loop over p.pins and init + store them in a hashmap by name (maybe add a conversion
+        // method into DynamicPin so we can use them as key and then pass that around?
+
         // Configure interrupt for pin connected target's GPIO pin
         let green = p.pins.pio1_0.into_dynamic_pin(
             gpio.tokens.pio1_0,
@@ -556,15 +559,15 @@ const APP: () = {
                                 pin::Level::High => {
                                     rprintln!("received dynamic HIGH command for {:?}", pin);
                                     match pin {
-                                        DynamicPin::Red => red.set_high(),
-                                        DynamicPin::Green => todo!(),
+                                        DynamicPin::PIO1_2 => red.set_high(),
+                                        _ => todo!(),
                                     };
                                 }
                                 pin::Level::Low => {
                                     rprintln!("received dynamic LOW command for {:?}", pin);
                                     match pin {
-                                        DynamicPin::Red => red.set_low(),
-                                        DynamicPin::Green => todo!(),
+                                        DynamicPin::PIO1_2 => red.set_low(),
+                                        _ => todo!(),
                                     };
                                 }
                             }
@@ -606,16 +609,18 @@ const APP: () = {
                                 pin::Direction::Input => {
                                     rprintln!("switching {:?} to INPUT", pin);
                                     match pin {
-                                        DynamicPin::Red => red.switch_to_input(),
-                                        DynamicPin::Green => green.switch_to_input(),
+                                        DynamicPin::PIO1_2 => red.switch_to_input(),
+                                        DynamicPin::PIO1_0 => green.switch_to_input(),
+                                        _ => todo!(),
                                     };
                                     Ok(())
                                 }
                                 pin::Direction::Output => {
                                     rprintln!("switching to {:?} OUTPUT; Level LOW (led on)", pin);
                                     match pin {
-                                        DynamicPin::Red => red.switch_to_output(gpio::Level::Low),
-                                        DynamicPin::Green => green.switch_to_output(gpio::Level::Low),
+                                        DynamicPin::PIO1_2 => red.switch_to_output(gpio::Level::Low),
+                                        DynamicPin::PIO1_0 => green.switch_to_output(gpio::Level::Low),
+                                        _ => todo!(),
                                     };
                                     Ok(())
                                 }
@@ -630,8 +635,7 @@ const APP: () = {
                             let mut result = None;
 
                             match pin {
-                                DynamicPin::Red => {todo!()}
-                                DynamicPin::Green => {
+                                DynamicPin::PIO1_0 => { // green led (TODO: applicable to all?)
                                     result = dynamic_pins.get(&(pin as usize))
                                     .map(|&(level, period_ms)| {
                                         pin::ReadLevelResult {
@@ -641,6 +645,7 @@ const APP: () = {
                                         }
                                     });
                                 }
+                                _ => {todo!()}
                             }
 
                             rprintln!("sending read result: {:?}", result);
@@ -660,7 +665,7 @@ const APP: () = {
                 .expect("Error processing host request");
             host_rx.clear_buf();
 
-            handle_pin_interrupt_dynamic(green_idle, DynamicPin::Green, &mut dynamic_pins);
+            handle_pin_interrupt_dynamic(green_idle, DynamicPin::PIO1_0, &mut dynamic_pins);
             handle_pin_interrupt(blue,  InputPin::Blue,  &mut pins);
             handle_pin_interrupt(rts,   InputPin::Rts,   &mut pins);
 

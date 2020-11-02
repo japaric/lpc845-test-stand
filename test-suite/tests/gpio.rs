@@ -12,20 +12,23 @@ use lpc845_test_suite::{
     TestStand,
 };
 
+const RED_LED : DynamicPin = DynamicPin::PIO1_2;
+const GRN_LED : DynamicPin = DynamicPin::PIO1_0;
+
 
 #[test]
 fn it_should_set_pin_level() -> Result {
     // SETUP
     let mut test_stand = TestStand::new()?;
-    test_stand.assistant.set_pin_direction_input( DynamicPin::Green )?;
+    test_stand.assistant.set_pin_direction_input( GRN_LED )?;
 
     // TEST & ASSERT POSTCONDITION
     test_stand.target.set_pin_low()?;
-    assert!(test_stand.assistant.input_pin_is_low(DynamicPin::Green)?);
+    assert!(test_stand.assistant.input_pin_is_low( GRN_LED )?);
 
     // TEST & ASSERT POSTCONDITION
     test_stand.target.set_pin_high()?;
-    assert!(test_stand.assistant.input_pin_is_high(DynamicPin::Green)?);
+    assert!(test_stand.assistant.input_pin_is_high( GRN_LED )?);
 
     Ok(())
 }
@@ -34,12 +37,12 @@ fn it_should_set_pin_level() -> Result {
 fn it_should_read_input_level() -> Result {
     // SETUP
     let mut test_stand = TestStand::new()?;
-    test_stand.assistant.set_pin_direction_output( DynamicPin::Red )?;
+    test_stand.assistant.set_pin_direction_output( RED_LED )?;
 
-    test_stand.assistant.set_output_pin_low( DynamicPin::Red )?;
+    test_stand.assistant.set_output_pin_low( RED_LED )?;
     assert!(test_stand.target.pin_is_low()?);
 
-    test_stand.assistant.set_output_pin_high( DynamicPin::Red )?;
+    test_stand.assistant.set_output_pin_high( RED_LED )?;
     assert!(test_stand.target.pin_is_high()?);
 
     Ok(())
@@ -49,12 +52,12 @@ fn it_should_read_input_level() -> Result {
 fn dynamic_red_led_should_light_up_on_low() -> Result {
      // SETUP
     let mut test_stand = TestStand::new()?;
-    test_stand.assistant.set_pin_direction_output( DynamicPin::Red )?;
-    test_stand.assistant.set_output_pin_high( DynamicPin::Red )?;
+    test_stand.assistant.set_pin_direction_output( RED_LED )?;
+    test_stand.assistant.set_output_pin_high( RED_LED )?;
 
     // RUN TEST
     sleep(time::Duration::from_secs(2));
-    test_stand.assistant.set_output_pin_low( DynamicPin::Red )?;
+    test_stand.assistant.set_output_pin_low( RED_LED )?;
 
     // 👀  manually assert that on-board led is red after 2 secs
 
@@ -66,22 +69,22 @@ fn dynamic_red_led_should_be_toggleable_by_pin_direction() -> Result {
     // SETUP
     let mut test_stand = TestStand::new()?;
     // ensure pin is low (-> red led is on) when we start
-    test_stand.assistant.set_output_pin_low( DynamicPin::Red )?;
+    test_stand.assistant.set_output_pin_low( RED_LED )?;
 
     // RUN TEST
-    for n in 0..10 {
+    for n in 0..5 {
         sleep(time::Duration::from_secs(2));
 
         // toggle back and forth between in/output
         if n % 2 == 0 {
-            test_stand.assistant.set_pin_direction_input( DynamicPin::Red )?;
+            test_stand.assistant.set_pin_direction_input( RED_LED )?;
         } else {
-            test_stand.assistant.set_pin_direction_output( DynamicPin::Red )?;
+            test_stand.assistant.set_pin_direction_output( RED_LED )?;
         }
     }
 
     // ASSERT POSTCONDITION
-    // 👀  manually assert that led is toggling on/off 10 times every 2 secs
+    // 👀  manually assert that led is toggling on/off 5 times every 2 secs
 
     Ok(())
 }
@@ -90,25 +93,25 @@ fn dynamic_red_led_should_be_toggleable_by_pin_direction() -> Result {
 fn dynamic_red_led_should_be_toggleable_by_level() -> Result {
     // SETUP
     let mut test_stand = TestStand::new()?;
-    test_stand.assistant.set_pin_direction_output( DynamicPin::Red )?;
+    test_stand.assistant.set_pin_direction_output( RED_LED )?;
 
     // RUN TEST
-    for n in 0..10 {
+    for n in 0..5 {
         sleep(time::Duration::from_secs(2));
 
         // toggle back and forth between high/low
         if n % 2 == 0 {
-            test_stand.assistant.set_output_pin_low( DynamicPin::Red )?;
+            test_stand.assistant.set_output_pin_low( RED_LED )?;
             // TODO: why does this check blue led Levels and not red?
             //assert!(test_stand.assistant.pin_is_low()?);
         } else {
-            test_stand.assistant.set_output_pin_high( DynamicPin::Red )?;
+            test_stand.assistant.set_output_pin_high( RED_LED )?;
             //assert!(test_stand.target.pin_is_high()?);
         }
     }
 
     // ASSERT POSTCONDITION
-    // 👀  manually assert that led is toggling on/off 10 times every 2 secs
+    // 👀  manually assert that led is toggling on/off 5 times every 2 secs
 
     Ok(())
 }

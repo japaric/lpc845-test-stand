@@ -249,9 +249,30 @@ pub enum OutputPin {
 /// Represents one of the pins that the assistant can (re)configure at runtime
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub enum DynamicPin {
+    // TODO this feels like duplicate effort to IDs in `lpc8xx_hal::pins` which can lead to weird inconsistencies,
+    // can we re-use them or would that critically increase msg size/violate dependency boundaries?
+
     // TODO:
     // - add other pins here
     // - get rid of other pin enums (2nd step)
-    Red,
-    Green,
+    PIO0_0,
+    PIO0_1,
+    PIO0_2, // SWDIO
+    PIO0_3, // SWCLK
+    PIO0_4, // USER
+    PIO0_5, // RESET
+    PIO0_6,
+    PIO0_7, // ADC/POT
+    PIO1_0, // GRN LED
+    PIO1_1, // BLUE LED
+    PIO1_2, // RED LED
+    PIO0_15,
+    PIO0_14,
+    PIO0_13, // ISP
+    PIO0_12,
+    PIO0_11,
+    PIO0_10,
+    PIO0_09,
+    PIO0_08,
+    // TODO add other side if we decide to lock this in
 }
