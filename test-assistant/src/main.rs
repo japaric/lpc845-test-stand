@@ -123,7 +123,7 @@ const APP: () = {
         target_sync_tx:      Tx<USART3, SyncMode>,
 
         green_int:  pin_interrupt::Int<'static, PININT0, PIO1_0, MRT0>,
-        green_idle: pin_interrupt::Idle<'static>, // TODO do we need this?
+        green_idle: pin_interrupt::Idle<'static>,
 
         blue_int:  pin_interrupt::Int<'static, PININT1, PIO1_1, MRT1>,
         blue_idle: pin_interrupt::Idle<'static>,
@@ -600,31 +600,33 @@ const APP: () = {
                         HostToAssistant::SetDirection(
                             pin::SetDirection {
                                 pin,
-                                direction }
+                                direction: pin::Direction::Input,
+                            }
                         ) => {
-                            rprintln!("received SET DIRECTION command for {:?}. Get ready to toggle!", pin);
+                            rprintln!("received SET DIRECTION -> INPUT command for {:?}.", pin);
+                            // todo nicer and more generic once we start enabling ALL the pins
+                            match pin {
+                                DynamicPin::PIO1_2 => red.switch_to_input(),
+                                DynamicPin::PIO1_0 => green.switch_to_input(),
+                                _ => todo!(),
+                            };
+                            Ok(())
+                        },
+                        HostToAssistant::SetDirection(
+                            pin::SetDirection {
+                                pin,
+                                direction: pin::Direction::Output,
+                            }
+                        ) => {
+                            rprintln!("received SET DIRECTION -> OUTPUT command for {:?}. Default Level is LOW", pin);
                             // todo nicer and more generic once we start enabling ALL the pins
 
-                            match direction {
-                                pin::Direction::Input => {
-                                    rprintln!("switching {:?} to INPUT", pin);
-                                    match pin {
-                                        DynamicPin::PIO1_2 => red.switch_to_input(),
-                                        DynamicPin::PIO1_0 => green.switch_to_input(),
-                                        _ => todo!(),
-                                    };
-                                    Ok(())
-                                }
-                                pin::Direction::Output => {
-                                    rprintln!("switching to {:?} OUTPUT; Level LOW (led on)", pin);
-                                    match pin {
-                                        DynamicPin::PIO1_2 => red.switch_to_output(gpio::Level::Low),
-                                        DynamicPin::PIO1_0 => green.switch_to_output(gpio::Level::Low),
-                                        _ => todo!(),
-                                    };
-                                    Ok(())
-                                }
-                            }
+                            match pin {
+                                DynamicPin::PIO1_2 => red.switch_to_output(gpio::Level::Low),
+                                DynamicPin::PIO1_0 => green.switch_to_output(gpio::Level::Low),
+                                _ => todo!(),
+                            };
+                            Ok(())
                         },
                         HostToAssistant::ReadDynamicPin(
                             pin::ReadLevel { pin }
