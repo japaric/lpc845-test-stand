@@ -634,11 +634,13 @@ const APP: () = {
                         HostToTarget::SetPin(
                             pin::SetLevel { level: pin::Level::High, .. }
                         ) => {
+                            rprintln!("setting green to HIGH");
                             Ok(green.set_high())
                         }
                         HostToTarget::SetPin(
                             pin::SetLevel { level: pin::Level::Low, .. }
                         ) => {
+                            rprintln!("setting green to LOW");
                             Ok(green.set_low())
                         }
                         HostToTarget::ReadPin(pin::ReadLevel { pin: () }) => {

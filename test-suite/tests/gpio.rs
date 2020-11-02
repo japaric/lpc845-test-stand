@@ -13,15 +13,17 @@ use lpc845_test_suite::{
 };
 
 
-// TODO: this test and `it_should_read_input_level()` only run green if they are executed
-// *first* because the `dynamic_...` tests mess with red. => prevent double pin configs
 #[test]
 fn it_should_set_pin_level() -> Result {
+    // SETUP
     let mut test_stand = TestStand::new()?;
+    test_stand.assistant.set_pin_direction_input( DynamicPin::Green )?;
 
+    // TEST & ASSERT POSTCONDITION
     test_stand.target.set_pin_low()?;
-    assert!(test_stand.assistant.pin_is_low()?); // TODO fix this test
+    assert!(test_stand.assistant.pin_is_low()?);
 
+    // TEST & ASSERT POSTCONDITION
     test_stand.target.set_pin_high()?;
     assert!(test_stand.assistant.pin_is_high()?);
 

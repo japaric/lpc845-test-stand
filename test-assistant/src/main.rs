@@ -123,13 +123,14 @@ const APP: () = {
         target_sync_tx:      Tx<USART3, SyncMode>,
 
         green_int:  pin_interrupt::Int<'static, PININT0, PIO1_0, MRT0>,
-        green_idle: pin_interrupt::Idle<'static>,
+        green_idle: pin_interrupt::Idle<'static>, // TODO do we need this?
 
         blue_int:  pin_interrupt::Int<'static, PININT1, PIO1_1, MRT1>,
         blue_idle: pin_interrupt::Idle<'static>,
 
         cts: GpioPin<PIO0_8, Output>,
         red: GpioPin<PIO1_2, Dynamic>,
+        green: GpioPin<PIO1_0, Dynamic>,
 
         i2c: i2c::Slave<I2C0, Enabled<PhantomData<IOSC>>, Enabled>,
         spi: SPI<SPI0, Enabled<spi::Slave>>,
@@ -166,7 +167,10 @@ const APP: () = {
         let mut swm_handle = swm.handle.enable(&mut syscon.handle);
 
         // Configure interrupt for pin connected target's GPIO pin
-        let _green = p.pins.pio1_0.into_input_pin(gpio.tokens.pio1_0);
+        let green = p.pins.pio1_0.into_dynamic_pin(
+            gpio.tokens.pio1_0,
+            gpio::Level::High, // make green off by default
+        );
         let mut green_int = pinint
             .interrupts
             .pinint0
@@ -406,6 +410,7 @@ const APP: () = {
             blue_int,
             blue_idle,
 
+            green,
             red,
             cts,
 
@@ -427,6 +432,7 @@ const APP: () = {
             blue_idle,
             target_rts_idle,
             red,
+            green,
             cts,
         ]
     )]
@@ -438,13 +444,15 @@ const APP: () = {
         let target_tx_dma  = cx.resources.target_tx_dma;
         let target_sync_rx = cx.resources.target_sync_rx_idle;
         let target_sync_tx = cx.resources.target_sync_tx;
-        let green          = cx.resources.green_idle;
+        let green_idle     = cx.resources.green_idle;
+        let green          = cx.resources.green;
         let blue           = cx.resources.blue_idle;
         let rts            = cx.resources.target_rts_idle;
         let red            = cx.resources.red;
         let cts            = cx.resources.cts;
 
         let mut pins = FnvIndexMap::<_, _, U4>::new();
+        let mut dynamic_pins = FnvIndexMap::<_, _, U4>::new();
 
         let mut buf = [0; 256];
 
@@ -596,18 +604,18 @@ const APP: () = {
 
                             match direction {
                                 pin::Direction::Input => {
-                                    rprintln!("switching to INPUT");
+                                    rprintln!("switching {:?} to INPUT", pin);
                                     match pin {
                                         DynamicPin::Red => red.switch_to_input(),
-                                        DynamicPin::Green => todo!(),
+                                        DynamicPin::Green => green.switch_to_input(),
                                     };
                                     Ok(())
                                 }
                                 pin::Direction::Output => {
-                                    rprintln!("switching to OUTPUT; Level LOW (led on)");
+                                    rprintln!("switching to {:?} OUTPUT; Level LOW (led on)", pin);
                                     match pin {
                                         DynamicPin::Red => red.switch_to_output(gpio::Level::Low),
-                                        DynamicPin::Green => todo!(),
+                                        DynamicPin::Green => green.switch_to_output(gpio::Level::Low),
                                     };
                                     Ok(())
                                 }
@@ -616,14 +624,43 @@ const APP: () = {
                         HostToAssistant::ReadDynamicPin(
                             pin::ReadLevel { pin }
                         ) => {
-                            rprintln!("received READ DYNAMIC PIN command for {:?}", pin);
-                            todo!()}
+                            rprintln!("received READ DYNAMIC PIN command for {:?} | {}", pin, pin as usize);
+                            rprintln!("dynamic_pins: {:?}", dynamic_pins);
+
+                            let mut result = None;
+
+                            match pin {
+                                DynamicPin::Red => {todo!()}
+                                DynamicPin::Green => {
+                                    result = dynamic_pins.get(&(pin as usize))
+                                    .map(|&(level, period_ms)| {
+                                        pin::ReadLevelResult {
+                                            pin,
+                                            level,
+                                            period_ms,
+                                        }
+                                    });
+                                }
+                            }
+
+                            rprintln!("sending read result: {:?}", result);
+
+                            host_tx
+                                .send_message(
+                                    &AssistantToHost::ReadPinResultDynamic(result),
+                                    &mut buf,
+                                )
+                                .unwrap();
+
+                            Ok(())
+
+                        }
                     }
                 })
                 .expect("Error processing host request");
             host_rx.clear_buf();
 
-            handle_pin_interrupt_dynamic(green, DynamicPin::Green, &mut pins);
+            handle_pin_interrupt_dynamic(green_idle, DynamicPin::Green, &mut dynamic_pins);
             handle_pin_interrupt(blue,  InputPin::Blue,  &mut pins);
             handle_pin_interrupt(rts,   InputPin::Rts,   &mut pins);
 
@@ -642,7 +679,7 @@ const APP: () = {
                 let should_sleep =
                     !host_rx.can_process()
                     && !target_rx.can_process()
-                    && !green.is_ready();
+                    && green_idle.is_ready(); // TODO double check for soundness
 
                 if should_sleep {
                     // On LPC84x MCUs, debug mode is not supported when
@@ -759,6 +796,7 @@ fn handle_pin_interrupt_dynamic(
     while let Some(event) = int.next() {
         match event {
             pin_interrupt::Event { level, period } => {
+                rprintln!("registered dynamic pin interrupt");
                 let level = match level {
                     gpio::Level::High => pin::Level::High,
                     gpio::Level::Low  => pin::Level::Low,

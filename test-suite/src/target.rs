@@ -38,7 +38,9 @@ impl Target {
         }
     }
 
-    /// Instruct the target to set a GPIO pin high
+    /// Instruct the target to set a GPIO pin high.
+    /// Which pin is being set is currently hardcoded in the test-target's `HostToTarget::SetPin`
+    /// message handling.
     pub fn set_pin_high(&mut self) -> Result<(), TargetSetPinHighError> {
         self.pin
             .set_level::<HostToTarget>(
@@ -48,7 +50,9 @@ impl Target {
             .map_err(|err| TargetSetPinHighError(err))
     }
 
-    /// Instruct the target to set a GPIO pin low
+    /// Instruct the target to set a GPIO pin low.
+    /// Which pin is being set is currently hardcoded in the test-target's `HostToTarget::SetPin`
+    /// message handling.
     pub fn set_pin_low(&mut self) -> Result<(), TargetSetPinLowError> {
         self.pin
             .set_level::<HostToTarget>(

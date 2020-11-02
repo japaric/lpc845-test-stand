@@ -80,7 +80,14 @@ impl Assistant {
                 )
                 .map_err(|err| AssistantSetPinDirectionInputError(err))
             }
-            DynamicPin::Green => {todo!()}
+            DynamicPin::Green => {
+                self.green_led
+                .set_direction::<HostToAssistant>(
+                    pin::Direction::Input,
+                    &mut self.conn
+                )
+                .map_err(|err| AssistantSetPinDirectionInputError(err))
+            }
         }
     }
 
