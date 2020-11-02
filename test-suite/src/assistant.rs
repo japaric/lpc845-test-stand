@@ -164,7 +164,6 @@ impl Assistant {
     /// Indicates whether the GPIO pin on the test target is set high
     ///
     /// Uses `pin_state` internally.
-    // TODO make generic– should be applicable to any pin
     pub fn pin_is_high(&mut self) -> Result<bool, AssistantPinReadError> {
         let pin_state = self.green_led
             .read_level::<HostToAssistant, AssistantToHost>(
@@ -178,13 +177,51 @@ impl Assistant {
     ///
     /// Uses `pin_state` internally.
     // TODO make generic– should be applicable to any pin
-
     pub fn pin_is_low(&mut self) -> Result<bool, AssistantPinReadError> {
         let pin_state = self.green_led
             .read_level::<HostToAssistant, AssistantToHost>(
                 Duration::from_millis(10),
                 &mut self.conn,
             )?;
+        Ok(pin_state.0 == pin::Level::Low)
+    }
+
+    /// Indicates whether the GPIO pin `pin` receives a **High** signal from the test target
+    /// Note that `pin` must be set to Input mode first!
+    ///
+    /// Uses `pin_state` internally.
+    // TODO make more generic: enable test to apply this to all pins, not just green
+    pub fn input_pin_is_high(&mut self, pin: DynamicPin) -> Result<bool, AssistantPinReadError> {
+        let pin_state: (pin::Level, Option<u32>);
+
+        match pin {
+            DynamicPin::Red => {todo!()}
+            DynamicPin::Green => {
+                pin_state = self.green_led
+                .read_level::<HostToAssistant, AssistantToHost>(
+                    Duration::from_millis(10),
+                    &mut self.conn,
+                )?;}
+        }
+        Ok(pin_state.0 == pin::Level::High)
+    }
+
+    /// Indicates whether the GPIO pin `pin` receives a **Low** signal from the test target
+    /// Note that `pin` must be set to Input mode first!
+    ///
+    /// Uses `pin_state` internally.
+    // TODO make more generic: enable test to apply this to all pins, not just green
+    pub fn input_pin_is_low(&mut self, pin: DynamicPin) -> Result<bool, AssistantPinReadError> {
+        let pin_state: (pin::Level, Option<u32>);
+        match pin {
+            DynamicPin::Red => {todo!()}
+            DynamicPin::Green => {
+                pin_state = self.green_led
+                .read_level::<HostToAssistant, AssistantToHost>(
+                    Duration::from_millis(10),
+                    &mut self.conn,
+                )?;}
+        }
         Ok(pin_state.0 == pin::Level::Low)
     }
 

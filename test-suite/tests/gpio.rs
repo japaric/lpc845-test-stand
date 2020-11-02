@@ -21,11 +21,11 @@ fn it_should_set_pin_level() -> Result {
 
     // TEST & ASSERT POSTCONDITION
     test_stand.target.set_pin_low()?;
-    assert!(test_stand.assistant.pin_is_low()?);
+    assert!(test_stand.assistant.input_pin_is_low(DynamicPin::Green)?);
 
     // TEST & ASSERT POSTCONDITION
     test_stand.target.set_pin_high()?;
-    assert!(test_stand.assistant.pin_is_high()?);
+    assert!(test_stand.assistant.input_pin_is_high(DynamicPin::Green)?);
 
     Ok(())
 }
