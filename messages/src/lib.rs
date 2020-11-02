@@ -176,6 +176,9 @@ pub enum AssistantToHost<'r> {
 
     /// Notify the host that the level of a pin has changed
     ReadPinResult(Option<pin::ReadLevelResult<InputPin>>),
+
+    /// Notify the host that the level of a dynamic pin has changed
+    ReadPinResultDynamic(Option<pin::ReadLevelResult<DynamicPin>>),
 }
 
 
@@ -186,6 +189,21 @@ impl<'r> TryFrom<AssistantToHost<'r>> for pin::ReadLevelResult<InputPin> {
     fn try_from(value: AssistantToHost<'r>) -> Result<Self, Self::Error> {
         match value {
             AssistantToHost::ReadPinResult(Some(result)) => {
+                Ok(result)
+            }
+            _ => {
+                Err(value)
+            }
+        }
+    }
+}
+
+impl<'r> TryFrom<AssistantToHost<'r>> for pin::ReadLevelResult<DynamicPin> {
+    type Error = AssistantToHost<'r>;
+
+    fn try_from(value: AssistantToHost<'r>) -> Result<Self, Self::Error> {
+        match value {
+            AssistantToHost::ReadPinResultDynamic(Some(result)) => {
                 Ok(result)
             }
             _ => {

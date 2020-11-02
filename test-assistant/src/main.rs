@@ -613,7 +613,11 @@ const APP: () = {
                                 }
                             }
                         },
-                        HostToAssistant::ReadDynamicPin(_) => {todo!()}
+                        HostToAssistant::ReadDynamicPin(
+                            pin::ReadLevel { pin }
+                        ) => {
+                            rprintln!("received READ DYNAMIC PIN command for {:?}", pin);
+                            todo!()}
                     }
                 })
                 .expect("Error processing host request");

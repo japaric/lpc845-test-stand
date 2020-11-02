@@ -29,7 +29,7 @@ use lpc845_messages::{
 pub struct Assistant {
     conn: Conn,
     red_led: Pin<DynamicPin>,
-    green_led: Pin<InputPin>, // TODO NEXT STEP make this dynamic as well
+    green_led: Pin<DynamicPin>,
     blue_led: Pin<InputPin>,
     cts: Pin<OutputPin>,
     rts: Pin<InputPin>,
@@ -40,7 +40,7 @@ impl Assistant {
         Self {
             conn,
             red_led: Pin::new(DynamicPin::Red),
-            green_led: Pin::new(InputPin::Green), // TODO NEXT STEP make this dynamic as well
+            green_led: Pin::new(DynamicPin::Green),
             blue_led: Pin::new(InputPin::Blue),
             cts: Pin::new(OutputPin::Cts),
             rts: Pin::new(InputPin::Rts),
@@ -157,6 +157,7 @@ impl Assistant {
     /// Indicates whether the GPIO pin on the test target is set high
     ///
     /// Uses `pin_state` internally.
+    // TODO make generic– should be applicable to any pin
     pub fn pin_is_high(&mut self) -> Result<bool, AssistantPinReadError> {
         let pin_state = self.green_led
             .read_level::<HostToAssistant, AssistantToHost>(
@@ -169,6 +170,8 @@ impl Assistant {
     /// Indicates whether the GPIO pin on the test target is set low
     ///
     /// Uses `pin_state` internally.
+    // TODO make generic– should be applicable to any pin
+
     pub fn pin_is_low(&mut self) -> Result<bool, AssistantPinReadError> {
         let pin_state = self.green_led
             .read_level::<HostToAssistant, AssistantToHost>(
