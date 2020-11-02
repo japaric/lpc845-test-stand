@@ -32,12 +32,14 @@ fn it_should_set_pin_level() -> Result {
 
 #[test]
 fn it_should_read_input_level() -> Result {
+    // SETUP
     let mut test_stand = TestStand::new()?;
+    test_stand.assistant.set_pin_direction_output( DynamicPin::Red )?;
 
-    test_stand.assistant.set_pin_low()?;
+    test_stand.assistant.set_output_pin_low( DynamicPin::Red )?;
     assert!(test_stand.target.pin_is_low()?);
 
-    test_stand.assistant.set_pin_high()?;
+    test_stand.assistant.set_output_pin_high( DynamicPin::Red )?;
     assert!(test_stand.target.pin_is_high()?);
 
     Ok(())
