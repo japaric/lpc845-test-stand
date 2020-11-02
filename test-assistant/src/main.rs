@@ -501,7 +501,7 @@ const APP: () = {
                         }
                         HostToAssistant::SetPin(
                             pin::SetLevel {
-                                pin: OutputPin::Dynamic,
+                                pin: OutputPin::Red,
                                 level,
                             }
                         ) => {

@@ -226,7 +226,6 @@ pub enum InputPin {
 pub enum OutputPin {
     Cts,
     Red, // TODO rm
-    Dynamic, // TODO rm
 }
 
 /// Represents one of the pins that the assistant can (re)configure at runtime

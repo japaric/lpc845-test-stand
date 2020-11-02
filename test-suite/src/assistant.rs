@@ -28,7 +28,7 @@ use lpc845_messages::{
 /// The connection to the test assistant
 pub struct Assistant {
     conn: Conn,
-    red_led: Pin<OutputPin>,
+    red_led: Pin<DynamicPin>,
     green_led: Pin<InputPin>,
     blue_led: Pin<InputPin>,
     cts: Pin<OutputPin>,
@@ -40,7 +40,7 @@ impl Assistant {
     pub(crate) fn new(conn: Conn) -> Self {
         Self {
             conn,
-            red_led: Pin::new(OutputPin::Dynamic),
+            red_led: Pin::new(DynamicPin::Red),
             green_led: Pin::new(InputPin::Green),
             blue_led: Pin::new(InputPin::Blue),
             cts: Pin::new(OutputPin::Cts),
