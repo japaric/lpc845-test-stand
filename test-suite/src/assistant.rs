@@ -29,11 +29,10 @@ use lpc845_messages::{
 pub struct Assistant {
     conn: Conn,
     red_led: Pin<DynamicPin>,
-    green_led: Pin<InputPin>,
+    green_led: Pin<InputPin>, // TODO NEXT STEP make this dynamic as well
     blue_led: Pin<InputPin>,
     cts: Pin<OutputPin>,
     rts: Pin<InputPin>,
-    dynamic_pin: Pin<DynamicPin>, // TODO how do I handle >1 dyn pin, will this still work or is it stateful?
 }
 
 impl Assistant {
@@ -41,11 +40,10 @@ impl Assistant {
         Self {
             conn,
             red_led: Pin::new(DynamicPin::Red),
-            green_led: Pin::new(InputPin::Green),
+            green_led: Pin::new(InputPin::Green), // TODO NEXT STEP make this dynamic as well
             blue_led: Pin::new(InputPin::Blue),
             cts: Pin::new(OutputPin::Cts),
             rts: Pin::new(InputPin::Rts),
-            dynamic_pin: Pin::new(DynamicPin::Red),
         }
     }
 
@@ -75,13 +73,14 @@ impl Assistant {
     pub fn set_pin_direction_input(&mut self, pin: DynamicPin) -> Result<(), AssistantSetPinDirectionInputError> {
         match pin {
             DynamicPin::Red => {
-                self.dynamic_pin
+                self.red_led
                 .set_direction::<HostToAssistant>(
                     pin::Direction::Input,
                     &mut self.conn
                 )
                 .map_err(|err| AssistantSetPinDirectionInputError(err))
             }
+            DynamicPin::Green => {todo!()}
         }
     }
 
@@ -91,13 +90,14 @@ impl Assistant {
     pub fn set_pin_direction_output(&mut self, pin: DynamicPin) -> Result<(), AssistantSetPinDirectionOutputError> {
         match pin {
             DynamicPin::Red => {
-                self.dynamic_pin
+                self.red_led
                 .set_direction::<HostToAssistant>(
                     pin::Direction::Output,
                     &mut self.conn
                 )
                 .map_err(|err| AssistantSetPinDirectionOutputError(err))
             }
+            DynamicPin::Green => {todo!()}
         }
     }
 
@@ -107,13 +107,14 @@ impl Assistant {
         // TODO assert that pin is in output direction
         match pin {
             DynamicPin::Red => {
-                self.dynamic_pin
+                self.red_led
                 .set_level::<HostToAssistant>(
                     pin::Level::High,
                     &mut self.conn,
                 )
                 .map_err(|err| AssistantSetPinHighError(err))
             }
+            DynamicPin::Green => {todo!()}
         }
     }
 
@@ -122,13 +123,14 @@ impl Assistant {
     pub fn set_output_pin_low(&mut self, pin: DynamicPin) -> Result<(), AssistantSetPinLowError> {
         match pin {
             DynamicPin::Red => {
-                self.dynamic_pin
+                self.red_led
                 .set_level::<HostToAssistant>(
                     pin::Level::Low,
                     &mut self.conn,
                 )
                 .map_err(|err| AssistantSetPinLowError(err))
             }
+            DynamicPin::Green => {todo!()}
         }
     }
 

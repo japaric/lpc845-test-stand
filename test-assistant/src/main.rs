@@ -537,23 +537,27 @@ const APP: () = {
                             cts.set_low();
                             Ok(())
                         }
-                        HostToAssistant::SetPin(_) => {
-                            unimplemented!()
-                        }
                         HostToAssistant::SetDynamicPin(
                             pin::SetLevel {
-                                pin: DynamicPin::Red, // TODO apply to all pins
+                                pin,
                                 level,
                             }
                         ) => {
+                            // todo nicer and more generic once we start enabling ALL the pins
                             match level {
                                 pin::Level::High => {
-                                    rprintln!("received dynamic red HIGH command");
-                                    red.set_high();
+                                    rprintln!("received dynamic HIGH command for {:?}", pin);
+                                    match pin {
+                                        DynamicPin::Red => red.set_high(),
+                                        DynamicPin::Green => todo!(),
+                                    };
                                 }
                                 pin::Level::Low => {
-                                    rprintln!("received dynamic red LOW command");
-                                    red.set_low();
+                                    rprintln!("received dynamic LOW command for {:?}", pin);
+                                    match pin {
+                                        DynamicPin::Red => red.set_low(),
+                                        DynamicPin::Green => todo!(),
+                                    };
                                 }
                             }
                             Ok(())
@@ -583,19 +587,28 @@ const APP: () = {
                             Ok(())
                         }
                         HostToAssistant::SetDirection(
-                            // TODO convert to generic pin support
-                            pin::SetDirection { pin: DynamicPin::Red , direction }
+                            pin::SetDirection {
+                                pin,
+                                direction }
                         ) => {
-                            rprintln!("received SET DIRECTION command. Get ready to toggle!");
+                            rprintln!("received SET DIRECTION command for {:?}. Get ready to toggle!", pin);
+                            // todo nicer and more generic once we start enabling ALL the pins
+
                             match direction {
                                 pin::Direction::Input => {
                                     rprintln!("switching to INPUT");
-                                    red.switch_to_input();
+                                    match pin {
+                                        DynamicPin::Red => red.switch_to_input(),
+                                        DynamicPin::Green => todo!(),
+                                    };
                                     Ok(())
                                 }
                                 pin::Direction::Output => {
                                     rprintln!("switching to OUTPUT; Level LOW (led on)");
-                                    red.switch_to_output(gpio::Level::Low);
+                                    match pin {
+                                        DynamicPin::Red => red.switch_to_output(gpio::Level::Low),
+                                        DynamicPin::Green => todo!(),
+                                    };
                                     Ok(())
                                 }
                             }
@@ -606,7 +619,7 @@ const APP: () = {
                 .expect("Error processing host request");
             host_rx.clear_buf();
 
-            handle_pin_interrupt(green, InputPin::Green, &mut pins);
+            handle_pin_interrupt_dynamic(green, DynamicPin::Green, &mut pins);
             handle_pin_interrupt(blue,  InputPin::Blue,  &mut pins);
             handle_pin_interrupt(rts,   InputPin::Rts,   &mut pins);
 
@@ -734,6 +747,28 @@ const APP: () = {
 };
 
 
+fn handle_pin_interrupt_dynamic(
+    int:  &mut pin_interrupt::Idle,
+    pin:  DynamicPin,
+    pins: &mut FnvIndexMap<usize, (pin::Level, Option<u32>), U4>,
+) {
+    while let Some(event) = int.next() {
+        match event {
+            pin_interrupt::Event { level, period } => {
+                let level = match level {
+                    gpio::Level::High => pin::Level::High,
+                    gpio::Level::Low  => pin::Level::Low,
+                };
+
+                let period_ms = period.map(|value| value / 12_000);
+                pins.insert(pin as usize, (level, period_ms)).unwrap();
+            }
+        }
+    }
+}
+
+
+// TODO get rid of this when we make all pins dynamic
 fn handle_pin_interrupt(
     int:  &mut pin_interrupt::Idle,
     pin:  InputPin,

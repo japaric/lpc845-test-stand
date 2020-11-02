@@ -231,5 +231,6 @@ pub enum OutputPin {
 /// Represents one of the pins that the assistant can (re)configure at runtime
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub enum DynamicPin {
-    Red, // TODO add other pins here??
+    Red, // TODO add other pins here and get rid of other pin enums (2nd step)
+    Green,
 }
