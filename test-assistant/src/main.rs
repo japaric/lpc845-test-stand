@@ -134,7 +134,7 @@ const APP: () = {
         blue_int:  pin_interrupt::Int<'static, PININT1, PIO1_1, MRT1>,
         blue_idle: pin_interrupt::Idle<'static>,
 
-        pinint0_int:  pin_interrupt::Int<'static, PININT0, PIO1_0, MRT0>,
+        pinint0_int:  pin_interrupt::Int<'static, PININT0, PININT0_PIN, MRT0>,
         pinint0_idle: pin_interrupt::Idle<'static>,
 
         cts: GpioPin<PIO0_8, Output>,
