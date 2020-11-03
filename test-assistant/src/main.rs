@@ -100,6 +100,16 @@ use lpc845_messages::{
     pin,
 };
 
+/// NOTE TO USERS: adjust the pins in this list to change which pin *could* be used as input pin.
+/// Currently only TODO Input-able pins are supported.
+
+// todo I actually want to use lpc8xx_hal::pins here instead but I can't figure out how.. they're
+// structs but not defined anywhere? also how can I even pass them to select::<??>()? arghhhhhhhh
+//const PININT0_PIN: lpc8xx_hal::pins = PIO1_0(());
+
+#[allow(non_camel_case_types)]
+type PININT0_PIN = lpc8xx_hal::pins::PIO1_0;
+
 #[rtic::app(device = lpc8xx_hal::pac)]
 const APP: () = {
     struct Resources {
@@ -122,11 +132,11 @@ const APP: () = {
         target_sync_rx_idle: RxIdle<'static>,
         target_sync_tx:      Tx<USART3, SyncMode>,
 
-        green_int:  pin_interrupt::Int<'static, PININT0, PIO1_0, MRT0>,
-        green_idle: pin_interrupt::Idle<'static>,
-
         blue_int:  pin_interrupt::Int<'static, PININT1, PIO1_1, MRT1>,
         blue_idle: pin_interrupt::Idle<'static>,
+
+        pinint0_int:  pin_interrupt::Int<'static, PININT0, PIO1_0, MRT0>,
+        pinint0_idle: pin_interrupt::Idle<'static>,
 
         cts: GpioPin<PIO0_8, Output>,
         red: GpioPin<PIO1_2, Dynamic>,
@@ -166,20 +176,18 @@ const APP: () = {
 
         let mut swm_handle = swm.handle.enable(&mut syscon.handle);
 
-        // TODO: loop over p.pins and init + store them in a hashmap by name (maybe add a conversion
-        // method into DynamicPin so we can use them as key and then pass that around?
-
         // Configure interrupt for pin connected target's GPIO pin
         let green = p.pins.pio1_0.into_dynamic_pin(
             gpio.tokens.pio1_0,
             gpio::Level::High, // make green off by default
         );
-        let mut green_int = pinint
+
+        let mut pinint0_int = pinint
             .interrupts
             .pinint0
-            .select::<PIO1_0>(&mut syscon.handle);
-        green_int.enable_rising_edge();
-        green_int.enable_falling_edge();
+            .select::<PININT0_PIN>(&mut syscon.handle);
+        pinint0_int.enable_rising_edge();
+        pinint0_int.enable_falling_edge();
 
         // Configure interrupt for pin connected to target's timer interrupt pin
         let _blue = p.pins.pio1_1.into_input_pin(gpio.tokens.pio1_1);
@@ -328,7 +336,7 @@ const APP: () = {
         let (target_sync_rx_int, target_sync_rx_idle, target_sync_tx) =
             TARGET_SYNC.init(target_sync);
 
-        let (green_int, green_idle) = GREEN.init(green_int, timers.mrt0);
+        let (pinint0_int, pinint0_idle) = GREEN.init(pinint0_int, timers.mrt0);
         let (blue_int,  blue_idle)  = BLUE.init(blue_int, timers.mrt1);
 
         // Assign I2C0 pin functions
@@ -407,8 +415,8 @@ const APP: () = {
             target_sync_rx_idle,
             target_sync_tx,
 
-            green_int,
-            green_idle,
+            pinint0_int,
+            pinint0_idle,
 
             blue_int,
             blue_idle,
@@ -431,7 +439,7 @@ const APP: () = {
             target_tx_dma,
             target_sync_rx_idle,
             target_sync_tx,
-            green_idle,
+            pinint0_idle,
             blue_idle,
             target_rts_idle,
             red,
@@ -447,7 +455,7 @@ const APP: () = {
         let target_tx_dma  = cx.resources.target_tx_dma;
         let target_sync_rx = cx.resources.target_sync_rx_idle;
         let target_sync_tx = cx.resources.target_sync_tx;
-        let green_idle     = cx.resources.green_idle;
+        let pinint0_idle     = cx.resources.pinint0_idle;
         let green          = cx.resources.green;
         let blue           = cx.resources.blue_idle;
         let rts            = cx.resources.target_rts_idle;
@@ -620,7 +628,6 @@ const APP: () = {
                         ) => {
                             rprintln!("received SET DIRECTION -> OUTPUT command for {:?}. Default Level is LOW", pin);
                             // todo nicer and more generic once we start enabling ALL the pins
-
                             match pin {
                                 DynamicPin::PIO1_2 => red.switch_to_output(gpio::Level::Low),
                                 DynamicPin::PIO1_0 => green.switch_to_output(gpio::Level::Low),
@@ -667,7 +674,8 @@ const APP: () = {
                 .expect("Error processing host request");
             host_rx.clear_buf();
 
-            handle_pin_interrupt_dynamic(green_idle, DynamicPin::PIO1_0, &mut dynamic_pins);
+            // TODO adapt DynamicPin number based on PININT0_PIN as well!!
+            handle_pin_interrupt_dynamic(pinint0_idle, DynamicPin::PIO1_0, &mut dynamic_pins);
             handle_pin_interrupt(blue,  InputPin::Blue,  &mut pins);
             handle_pin_interrupt(rts,   InputPin::Rts,   &mut pins);
 
@@ -686,7 +694,7 @@ const APP: () = {
                 let should_sleep =
                     !host_rx.can_process()
                     && !target_rx.can_process()
-                    && green_idle.is_ready(); // TODO double check for soundness
+                    && pinint0_idle.is_ready(); // TODO double check for soundness
 
                 if should_sleep {
                     // On LPC84x MCUs, debug mode is not supported when
@@ -718,9 +726,10 @@ const APP: () = {
             .expect("Error receiving from USART3");
     }
 
-    #[task(binds = PIN_INT0, resources = [green_int])]
+    // TODO rethink thissss xoxo (tomorrow)
+    #[task(binds = PIN_INT0, resources = [pinint0_int])]
     fn pinint0(context: pinint0::Context) {
-        context.resources.green_int.handle_interrupt();
+        context.resources.pinint0_int.handle_interrupt();
     }
 
     #[task(binds = PIN_INT1, resources = [blue_int])]

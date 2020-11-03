@@ -64,6 +64,9 @@ impl PinInterrupt {
     }
 }
 
+// TODO idea: add DynInt with no fixed pins::Trait on init + setter?
+//      problem: pin id stiull needs to be known @ compile time for
+//      `int:       pinint::Interrupt<I, P, Enabled>,`
 
 /// Pin interrupt API for the interrupt context
 ///
