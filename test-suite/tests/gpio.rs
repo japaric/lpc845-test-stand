@@ -115,22 +115,40 @@ fn dynamic_red_led_should_be_toggleable_by_level() -> Result {
     Ok(())
 }
 
+// TODO add tests checking that:
+// - attempting to call Input methods on a dynamic Pin set to Output (and vice versa) causes understandable errors
+// - what happens if I call dyn read/write funtions on uninitialized pin?
+
+// TODO make this test green
 #[test]
-fn dynamic_red_led_should_be_readable() -> Result {
+fn dynamic_interrupt_handlers_should_be_deregistered_on_direction_switch() -> Result {
     // SETUP
-    //let mut test_stand = TestStand::new()?;
-    // configure target red as output
-    //test_stand.assistant.set_pin_direction_output( DynamicPin::Red )?;
-    // assistant red as input
-    //test_stand.assistant.set_pin_direction_input()?;
+    let mut test_stand = TestStand::new()?;
+    test_stand.assistant.set_pin_direction_input( GRN_LED )?;
+    test_stand.target.set_pin_low()?;
+    test_stand.assistant.set_pin_direction_output( GRN_LED )?;
 
     // RUN TEST
-    // TODO
-    // set target red high
-    // read + assert assistant red high
+    let read_result = test_stand.assistant.input_pin_is_low( GRN_LED );
+
+    // ASSERT POSTCONDITION
+    assert!(read_result.is_err());
 
     Ok(())
 }
 
-// TODO add tests checking that:
-// - attempting to call Input methods on a dynamic Pin set to Output (and vice versa) causes understandable errors
+#[test]
+fn dynamic_input_calls_on_output_direction_should_yield_useful_error() -> Result {
+    // SETUP
+    let mut test_stand = TestStand::new()?;
+    test_stand.assistant.set_pin_direction_output( GRN_LED )?;
+
+    // RUN TEST
+    let read_result = test_stand.assistant.input_pin_is_low( GRN_LED );
+
+    // ASSERT POSTCONDITION
+    // TODO. make error more useful here
+    assert!(read_result.is_err());
+
+    Ok(())
+}

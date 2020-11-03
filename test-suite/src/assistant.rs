@@ -92,7 +92,7 @@ impl Assistant {
         }
     }
 
-    // TODO make more generic: enable test to apply this to all pins, not just red
+    // TODO make more generic: enable test to apply this to all pins, not just red and green
     // (same for set_pin_low()/set_pin_high() needed then I guess?)
     /// TODO add docs
     pub fn set_pin_direction_output(&mut self, pin: DynamicPin) -> Result<(), AssistantSetPinDirectionOutputError> {
@@ -104,7 +104,15 @@ impl Assistant {
                     &mut self.conn
                 )
                 .map_err(|err| AssistantSetPinDirectionOutputError(err))
-            }
+            },
+            DynamicPin::PIO1_0 => {
+                self.green_led
+                .set_direction::<HostToAssistant>(
+                    pin::Direction::Output,
+                    &mut self.conn
+                )
+                .map_err(|err| AssistantSetPinDirectionOutputError(err))
+            },
             _ => {todo!()}
         }
     }
@@ -218,6 +226,13 @@ impl Assistant {
         match pin {
             DynamicPin::PIO1_0 => {
                 pin_state = self.green_led
+                .read_level::<HostToAssistant, AssistantToHost>(
+                    Duration::from_millis(10),
+                    &mut self.conn,
+                )?;
+            },
+            DynamicPin::PIO1_2 => {
+                pin_state = self.red_led
                 .read_level::<HostToAssistant, AssistantToHost>(
                     Duration::from_millis(10),
                     &mut self.conn,

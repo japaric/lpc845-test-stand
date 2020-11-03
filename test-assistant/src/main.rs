@@ -625,21 +625,16 @@ const APP: () = {
                             rprintln!("received READ DYNAMIC PIN command for {:?} | {}", pin, pin as usize);
                             rprintln!("dynamic_pins: {:?}", dynamic_pins);
 
-                            let mut result = None;
-
-                            match pin {
-                                DynamicPin::PIO1_0 => { // green led (TODO: applicable to all?)
-                                    result = dynamic_pins.get(&(pin as usize))
-                                    .map(|&(level, period_ms)| {
-                                        pin::ReadLevelResult {
-                                            pin,
-                                            level,
-                                            period_ms,
-                                        }
-                                    });
-                                }
-                                _ => {todo!()}
-                            }
+                            // TODO: really applicable to all?
+                            let mut result = dynamic_pins
+                                .get(&(pin as usize))
+                                .map(|&(level, period_ms)| {
+                                    pin::ReadLevelResult {
+                                        pin,
+                                        level,
+                                        period_ms,
+                                    }
+                                });
 
                             rprintln!("sending read result: {:?}", result);
 
