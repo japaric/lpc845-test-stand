@@ -131,7 +131,7 @@ pub enum HostToAssistant<'r> {
     /// Ask the assistant for the current level of a dynamic pin if direction is output
     ReadDynamicPin(pin::ReadLevel<DynamicPin>),
 
-    /// TODO add docs
+    /// Instruct the assistant to change the direction of its pin
     SetDirection(pin::SetDirection<DynamicPin>),
 }
 
@@ -181,8 +181,6 @@ pub enum AssistantToHost<'r> {
     ReadPinResultDynamic(Option<pin::ReadLevelResult<DynamicPin>>),
 }
 
-
-// todo adapt for dynamic pin too?
 impl<'r> TryFrom<AssistantToHost<'r>> for pin::ReadLevelResult<InputPin> {
     type Error = AssistantToHost<'r>;
 
@@ -243,7 +241,6 @@ pub enum InputPin {
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub enum OutputPin {
     Cts,
-    Red, // TODO rm
 }
 
 /// Represents one of the pins that the assistant can (re)configure at runtime

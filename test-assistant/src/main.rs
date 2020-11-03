@@ -522,24 +522,6 @@ const APP: () = {
                         }
                         HostToAssistant::SetPin(
                             pin::SetLevel {
-                                pin: OutputPin::Red,
-                                level,
-                            }
-                        ) => {
-                            match level {
-                                pin::Level::High => {
-                                    rprintln!("received red HIGH command");
-                                    red.set_high();
-                                }
-                                pin::Level::Low => {
-                                    rprintln!("received red LOW command");
-                                    red.set_low();
-                                }
-                            }
-                            Ok(())
-                        }
-                        HostToAssistant::SetPin(
-                            pin::SetLevel {
                                 pin: OutputPin::Cts,
                                 level: pin::Level::High,
                             }
@@ -676,7 +658,6 @@ const APP: () = {
                 .expect("Error processing host request");
             host_rx.clear_buf();
 
-            // TODO adapt DynamicPin number based on PININT0_PIN as well!!
             handle_pin_interrupt_dynamic(pinint0_idle, PININT0_DYN_PIN, &mut dynamic_pins);
             handle_pin_interrupt(blue,  InputPin::Blue,  &mut pins);
             handle_pin_interrupt(rts,   InputPin::Rts,   &mut pins);

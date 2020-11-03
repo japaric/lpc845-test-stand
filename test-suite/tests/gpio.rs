@@ -102,11 +102,10 @@ fn dynamic_red_led_should_be_toggleable_by_level() -> Result {
         // toggle back and forth between high/low
         if n % 2 == 0 {
             test_stand.assistant.set_output_pin_low( RED_LED )?;
-            // TODO: why does this check blue led Levels and not red?
-            //assert!(test_stand.assistant.pin_is_low()?);
+            assert!(test_stand.target.pin_is_low()?);
         } else {
             test_stand.assistant.set_output_pin_high( RED_LED )?;
-            //assert!(test_stand.target.pin_is_high()?);
+            assert!(test_stand.target.pin_is_high()?);
         }
     }
 
