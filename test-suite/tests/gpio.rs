@@ -12,8 +12,8 @@ use lpc845_test_suite::{
     TestStand,
 };
 
-const RED_LED : DynamicPin = DynamicPin::PIO1_2;
-const GRN_LED : DynamicPin = DynamicPin::PIO1_0;
+const RED_LED : DynamicPin = DynamicPin::GPIO(29);
+const GRN_LED : DynamicPin = DynamicPin::GPIO(31);
 
 
 #[test]

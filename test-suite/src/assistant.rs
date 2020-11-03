@@ -39,8 +39,8 @@ impl Assistant {
     pub(crate) fn new(conn: Conn) -> Self {
         Self {
             conn,
-            red_led: Pin::new(DynamicPin::PIO1_2),
-            green_led: Pin::new(DynamicPin::PIO1_0), // TODO init ALL the pins?
+            red_led: Pin::new(DynamicPin::GPIO(29)),
+            green_led: Pin::new(DynamicPin::GPIO(31)), // TODO init ALL the pins? TODO yep and yolo it
             blue_led: Pin::new(InputPin::Blue),
             cts: Pin::new(OutputPin::Cts),
             rts: Pin::new(InputPin::Rts),
@@ -72,7 +72,7 @@ impl Assistant {
     /// TODO add docs
     pub fn set_pin_direction_input(&mut self, pin: DynamicPin) -> Result<(), AssistantSetPinDirectionInputError> {
         match pin {
-            DynamicPin::PIO1_2 => {
+            DynamicPin::GPIO(29) => {
                 self.red_led
                 .set_direction::<HostToAssistant>(
                     pin::Direction::Input,
@@ -80,7 +80,7 @@ impl Assistant {
                 )
                 .map_err(|err| AssistantSetPinDirectionInputError(err))
             }
-            DynamicPin::PIO1_0 => {
+            DynamicPin::GPIO(31) => {
                 self.green_led
                 .set_direction::<HostToAssistant>(
                     pin::Direction::Input,
@@ -97,7 +97,7 @@ impl Assistant {
     /// TODO add docs
     pub fn set_pin_direction_output(&mut self, pin: DynamicPin) -> Result<(), AssistantSetPinDirectionOutputError> {
         match pin {
-            DynamicPin::PIO1_2 => {
+            DynamicPin::GPIO(29) => {
                 self.red_led
                 .set_direction::<HostToAssistant>(
                     pin::Direction::Output,
@@ -105,7 +105,7 @@ impl Assistant {
                 )
                 .map_err(|err| AssistantSetPinDirectionOutputError(err))
             },
-            DynamicPin::PIO1_0 => {
+            DynamicPin::GPIO(31) => {
                 self.green_led
                 .set_direction::<HostToAssistant>(
                     pin::Direction::Output,
@@ -122,7 +122,7 @@ impl Assistant {
     pub fn set_output_pin_high(&mut self, pin: DynamicPin) -> Result<(), AssistantSetPinHighError> {
         // TODO assert that pin is in output direction
         match pin {
-            DynamicPin::PIO1_2 => {
+            DynamicPin::GPIO(29) => {
                 self.red_led
                 .set_level::<HostToAssistant>(
                     pin::Level::High,
@@ -138,7 +138,7 @@ impl Assistant {
     /// TODO add docs
     pub fn set_output_pin_low(&mut self, pin: DynamicPin) -> Result<(), AssistantSetPinLowError> {
         match pin {
-            DynamicPin::PIO1_2 => {
+            DynamicPin::GPIO(29) => {
                 self.red_led
                 .set_level::<HostToAssistant>(
                     pin::Level::Low,
@@ -204,7 +204,7 @@ impl Assistant {
         let pin_state: (pin::Level, Option<u32>);
 
         match pin {
-            DynamicPin::PIO1_0 => {
+            DynamicPin::GPIO(31) => {
                 pin_state = self.green_led
                 .read_level::<HostToAssistant, AssistantToHost>(
                     Duration::from_millis(10),
@@ -224,14 +224,14 @@ impl Assistant {
     pub fn input_pin_is_low(&mut self, pin: DynamicPin) -> Result<bool, AssistantPinReadError> {
         let pin_state: (pin::Level, Option<u32>);
         match pin {
-            DynamicPin::PIO1_0 => {
+            DynamicPin::GPIO(31) => {
                 pin_state = self.green_led
                 .read_level::<HostToAssistant, AssistantToHost>(
                     Duration::from_millis(10),
                     &mut self.conn,
                 )?;
             },
-            DynamicPin::PIO1_2 => {
+            DynamicPin::GPIO(29) => {
                 pin_state = self.red_led
                 .read_level::<HostToAssistant, AssistantToHost>(
                     Duration::from_millis(10),
