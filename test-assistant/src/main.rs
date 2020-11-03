@@ -103,12 +103,11 @@ use lpc845_messages::{
 /// NOTE TO USERS: adjust the pins in this list to change which pin *could* be used as input pin.
 /// Currently only TODO Input-able pins are supported.
 
-// todo I actually want to use lpc8xx_hal::pins here instead but I can't figure out how.. they're
-// structs but not defined anywhere? also how can I even pass them to select::<??>()? arghhhhhhhh
-//const PININT0_PIN: lpc8xx_hal::pins = PIO1_0(());
-
+// TODO same question: can I somehow consolidate these into one? this is a mess
 #[allow(non_camel_case_types)]
-type PININT0_PIN = lpc8xx_hal::pins::PIO1_0;
+type PININT0_PIN = lpc8xx_hal::pins::PIO1_0;              // make sure that these
+const PININT0_DYN_PIN: DynamicPin = DynamicPin::PIO1_0;   // two match!
+
 
 #[rtic::app(device = lpc8xx_hal::pac)]
 const APP: () = {
@@ -177,6 +176,8 @@ const APP: () = {
         let mut swm_handle = swm.handle.enable(&mut syscon.handle);
 
         // Configure interrupt for pin connected target's GPIO pin
+        // TODO arghhhhh how do I retrieve my PININT0_PIN here?
+        // wait... can I maybe somehow map/loop over them and init all as dyn? but how? arghhhh
         let green = p.pins.pio1_0.into_dynamic_pin(
             gpio.tokens.pio1_0,
             gpio::Level::High, // make green off by default
@@ -461,7 +462,8 @@ const APP: () = {
         let rts            = cx.resources.target_rts_idle;
         let red            = cx.resources.red;
         let cts            = cx.resources.cts;
-
+// IDEA: add 8 "empty" idle_green + greens (we don't allow more interrupts rn anyway)
+// and then assign interrupts to pins on SetDirection -> Input?
         let mut pins = FnvIndexMap::<_, _, U4>::new();
         let mut dynamic_pins = FnvIndexMap::<_, _, U4>::new();
 
@@ -675,7 +677,7 @@ const APP: () = {
             host_rx.clear_buf();
 
             // TODO adapt DynamicPin number based on PININT0_PIN as well!!
-            handle_pin_interrupt_dynamic(pinint0_idle, DynamicPin::PIO1_0, &mut dynamic_pins);
+            handle_pin_interrupt_dynamic(pinint0_idle, PININT0_DYN_PIN, &mut dynamic_pins);
             handle_pin_interrupt(blue,  InputPin::Blue,  &mut pins);
             handle_pin_interrupt(rts,   InputPin::Rts,   &mut pins);
 
