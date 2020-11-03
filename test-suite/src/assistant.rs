@@ -3,6 +3,8 @@ use std::time::{
     Instant,
 };
 
+use std::collections::HashMap;
+
 use host_lib::{
     conn::{
         Conn,
@@ -17,54 +19,40 @@ use host_lib::{
 use lpc845_messages::{
     AssistantToHost,
     HostToAssistant,
-    InputPin,
-    OutputPin,
     DynamicPin,
     UsartMode,
     pin,
 };
 
+// TODO find a place to share them with t-a and t-t?
+/// some commonly used pin numbers
+pub const RTS_PIN_NUMBER : u8 = 18;
+pub const CTS_PIN_NUMBER : u8 = 19;
 
 /// The connection to the test assistant
 pub struct Assistant {
     conn: Conn,
-    red_led: Pin<DynamicPin>,
-    green_led: Pin<DynamicPin>,
-    blue_led: Pin<InputPin>,
-    cts: Pin<OutputPin>,
-    rts: Pin<InputPin>,
+    /// all of the assitant's GPIO pins, keyed by pin number (Arduino style)
+    pins: HashMap<u8, Pin<DynamicPin>>,
 }
 
 impl Assistant {
-    pub(crate) fn new(conn: Conn) -> Self {
-        Self {
+    pub(crate) fn new(conn: Conn, num_pins: u8) -> Self {
+        let mut s = Self {
             conn,
-            red_led: Pin::new(DynamicPin::GPIO(29)),
-            green_led: Pin::new(DynamicPin::GPIO(31)), // TODO init ALL the pins? TODO yep and yolo it
-            blue_led: Pin::new(InputPin::Blue),
-            cts: Pin::new(OutputPin::Cts),
-            rts: Pin::new(InputPin::Rts),
+            pins: HashMap::new(),
+        };
+
+        // init all pins
+        for pin_number in 1..=num_pins {
+            s.pins.insert(pin_number, Pin::new(DynamicPin::GPIO(pin_number)));
         }
-    }
 
-    /// Instruct the assistant to set the target's input pin high
-    pub fn set_pin_high(&mut self) -> Result<(), AssistantSetPinHighError> {
-        self.red_led
-            .set_level::<HostToAssistant>(
-                pin::Level::High,
-                &mut self.conn,
-            )
-            .map_err(|err| AssistantSetPinHighError(err))
-    }
+        // make sure rts and cts have the right direction
+        s.set_pin_direction_input(DynamicPin::GPIO(RTS_PIN_NUMBER)).unwrap();
+        s.set_pin_direction_output(DynamicPin::GPIO(CTS_PIN_NUMBER)).unwrap();
 
-    /// Instruct the assistant to set the target's input pin low
-    pub fn set_pin_low(&mut self) -> Result<(), AssistantSetPinLowError> {
-        self.red_led
-            .set_level::<HostToAssistant>(
-                pin::Level::Low,
-                &mut self.conn,
-            )
-            .map_err(|err| AssistantSetPinLowError(err))
+        return s;
     }
 
     // TODO make more generic: enable test to apply this to all pins, not just red
@@ -72,21 +60,13 @@ impl Assistant {
     /// TODO add docs
     pub fn set_pin_direction_input(&mut self, pin: DynamicPin) -> Result<(), AssistantSetPinDirectionInputError> {
         match pin {
-            DynamicPin::GPIO(29) => {
-                self.red_led
-                .set_direction::<HostToAssistant>(
-                    pin::Direction::Input,
-                    &mut self.conn
-                )
-                .map_err(|err| AssistantSetPinDirectionInputError(err))
-            }
-            DynamicPin::GPIO(31) => {
-                self.green_led
-                .set_direction::<HostToAssistant>(
-                    pin::Direction::Input,
-                    &mut self.conn
-                )
-                .map_err(|err| AssistantSetPinDirectionInputError(err))
+            DynamicPin::GPIO(pin_number) => {
+                self.pins.get_mut(&pin_number).unwrap()
+                    .set_direction::<HostToAssistant>(
+                        pin::Direction::Input,
+                        &mut self.conn
+                    )
+                    .map_err(|err| AssistantSetPinDirectionInputError(err))
             }
             _ => { todo!() }
         }
@@ -97,16 +77,8 @@ impl Assistant {
     /// TODO add docs
     pub fn set_pin_direction_output(&mut self, pin: DynamicPin) -> Result<(), AssistantSetPinDirectionOutputError> {
         match pin {
-            DynamicPin::GPIO(29) => {
-                self.red_led
-                .set_direction::<HostToAssistant>(
-                    pin::Direction::Output,
-                    &mut self.conn
-                )
-                .map_err(|err| AssistantSetPinDirectionOutputError(err))
-            },
-            DynamicPin::GPIO(31) => {
-                self.green_led
+            DynamicPin::GPIO(pin_number) => {
+                self.pins.get_mut(&pin_number).unwrap()
                 .set_direction::<HostToAssistant>(
                     pin::Direction::Output,
                     &mut self.conn
@@ -122,8 +94,8 @@ impl Assistant {
     pub fn set_output_pin_high(&mut self, pin: DynamicPin) -> Result<(), AssistantSetPinHighError> {
         // TODO assert that pin is in output direction
         match pin {
-            DynamicPin::GPIO(29) => {
-                self.red_led
+            DynamicPin::GPIO(pin_number) => {
+                self.pins.get_mut(&pin_number).unwrap()
                 .set_level::<HostToAssistant>(
                     pin::Level::High,
                     &mut self.conn,
@@ -138,8 +110,8 @@ impl Assistant {
     /// TODO add docs
     pub fn set_output_pin_low(&mut self, pin: DynamicPin) -> Result<(), AssistantSetPinLowError> {
         match pin {
-            DynamicPin::GPIO(29) => {
-                self.red_led
+            DynamicPin::GPIO(pin_number) => {
+                self.pins.get_mut(&pin_number).unwrap()
                 .set_level::<HostToAssistant>(
                     pin::Level::Low,
                     &mut self.conn,
@@ -152,7 +124,7 @@ impl Assistant {
 
     /// Instruct the assistant to disable CTS
     pub fn disable_cts(&mut self) -> Result<(), AssistantSetPinHighError> {
-        self.cts
+        self.pins.get_mut(&CTS_PIN_NUMBER).unwrap()
             .set_level::<HostToAssistant>(
                 pin::Level::High,
                 &mut self.conn,
@@ -162,37 +134,12 @@ impl Assistant {
 
     /// Instruct the assistant to enable CTS
     pub fn enable_cts(&mut self) -> Result<(), AssistantSetPinLowError> {
-        self.cts
+        self.pins.get_mut(&CTS_PIN_NUMBER).unwrap()
             .set_level::<HostToAssistant>(
                 pin::Level::Low,
                 &mut self.conn,
             )
             .map_err(|err| AssistantSetPinLowError(err))
-    }
-
-    /// Indicates whether the GPIO pin on the test target is set high
-    ///
-    /// Uses `pin_state` internally.
-    pub fn pin_is_high(&mut self) -> Result<bool, AssistantPinReadError> {
-        let pin_state = self.green_led
-            .read_level::<HostToAssistant, AssistantToHost>(
-                Duration::from_millis(10),
-                &mut self.conn,
-            )?;
-        Ok(pin_state.0 == pin::Level::High)
-    }
-
-    /// Indicates whether the GPIO pin on the test target is set low
-    ///
-    /// Uses `pin_state` internally.
-    // TODO make generic– should be applicable to any pin
-    pub fn pin_is_low(&mut self) -> Result<bool, AssistantPinReadError> {
-        let pin_state = self.green_led
-            .read_level::<HostToAssistant, AssistantToHost>(
-                Duration::from_millis(10),
-                &mut self.conn,
-            )?;
-        Ok(pin_state.0 == pin::Level::Low)
     }
 
     /// Indicates whether the GPIO pin `pin` receives a **High** signal from the test target
@@ -204,8 +151,8 @@ impl Assistant {
         let pin_state: (pin::Level, Option<u32>);
 
         match pin {
-            DynamicPin::GPIO(31) => {
-                pin_state = self.green_led
+            DynamicPin::GPIO(pin_number) => {
+                pin_state = self.pins.get_mut(&pin_number).unwrap()
                 .read_level::<HostToAssistant, AssistantToHost>(
                     Duration::from_millis(10),
                     &mut self.conn,
@@ -224,20 +171,13 @@ impl Assistant {
     pub fn input_pin_is_low(&mut self, pin: DynamicPin) -> Result<bool, AssistantPinReadError> {
         let pin_state: (pin::Level, Option<u32>);
         match pin {
-            DynamicPin::GPIO(31) => {
-                pin_state = self.green_led
-                .read_level::<HostToAssistant, AssistantToHost>(
+            DynamicPin::GPIO(pin_number) => {
+                pin_state = self.pins.get_mut(&pin_number).unwrap()
+                    .read_level::<HostToAssistant, AssistantToHost>(
                     Duration::from_millis(10),
                     &mut self.conn,
                 )?;
             },
-            DynamicPin::GPIO(29) => {
-                pin_state = self.red_led
-                .read_level::<HostToAssistant, AssistantToHost>(
-                    Duration::from_millis(10),
-                    &mut self.conn,
-                )?;
-            }
             _ => {todo!()}
         }
         Ok(pin_state.0 == pin::Level::Low)
@@ -245,7 +185,8 @@ impl Assistant {
 
     /// Wait for RTS signal to be enabled
     pub fn wait_for_rts(&mut self) -> Result<bool, AssistantPinReadError> {
-        let pin_state = self.rts.read_level::<HostToAssistant, AssistantToHost>(
+        let pin_state = self.pins.get_mut(&RTS_PIN_NUMBER).unwrap()
+            .read_level::<HostToAssistant, AssistantToHost>(
             Duration::from_millis(10),
             &mut self.conn,
         )?;
@@ -345,7 +286,7 @@ impl Assistant {
         }
     }
 
-    /// Measures the period of changes in a GPIO signal
+    /// Measures the period of changes in a GPIO signal on pin number 30 / PIO1_1 / BLUE LED
     ///
     /// Waits for changes in the GPIO signal until the given number of samples
     /// has been measured. Returns the minimum and maximum period measured, in
@@ -360,16 +301,17 @@ impl Assistant {
     {
         assert!(samples > 0);
 
+        let blue_led_pin_number = 30;
         let mut measurement: Option<GpioPeriodMeasurement> = None;
 
-        let (mut state, _) = self.blue_led
+        let (mut state, _) = self.pins.get_mut(&blue_led_pin_number).unwrap()
             .read_level::<HostToAssistant, AssistantToHost>(
                 timeout,
                 &mut self.conn,
             )?;
 
         for _ in 0 .. samples {
-            let (new_state, period_ms) = self.blue_led
+            let (new_state, period_ms) = self.pins.get_mut(&blue_led_pin_number).unwrap()
                 .read_level::<HostToAssistant, AssistantToHost>(
                     timeout,
                     &mut self.conn,

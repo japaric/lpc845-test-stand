@@ -243,6 +243,7 @@ pub enum OutputPin {
     Cts,
 }
 
+// TODO typedef pin number?
 /// Represents one of the pins that the assistant can (re)configure at runtime
 /// Note that the pin numbers used here correspond to the LPC845 breakout board pinouts counted
 /// from top left counterclockwise to top right

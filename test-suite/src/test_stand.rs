@@ -27,6 +27,9 @@ impl TestStand {
     /// Reads the `test-stand.toml` configuration file and initializes test
     /// stand resources, as configured in there.
     pub fn new() -> Result<Self, TestStandInitError> {
+        // the number of GPIO pins the test assistant has
+        let assistant_num_pins: u8 = 40; // TODO find a better place than to hardcode this here
+
         let test_stand = host_lib::TestStand::new()
             .map_err(|err| TestStandInitError::Inner(err))?;
 
@@ -34,7 +37,7 @@ impl TestStand {
             Self {
                 _guard:    test_stand.guard,
                 target:    Target::new(test_stand.target?),
-                assistant: Assistant::new(test_stand.assistant?),
+                assistant: Assistant::new(test_stand.assistant?, assistant_num_pins),
             }
         )
     }

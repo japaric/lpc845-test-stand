@@ -100,10 +100,14 @@ use lpc845_messages::{
     pin,
 };
 
+
+// TODO find a place to share them with t-s and t-t?
+/// some commonly used pin numbers
+pub const RTS_PIN_NUMBER : u8 = 18;
+pub const CTS_PIN_NUMBER : u8 = 19;
+
 /// NOTE TO USERS: adjust the pins in this list to change which pin *could* be used as input pin.
 /// Currently only TODO Input-able pins are supported.
-
-// TODO same question: can I somehow consolidate these into one? this is a mess
 #[allow(non_camel_case_types)]
 type PININT0_PIN = lpc8xx_hal::pins::PIO1_0;               // make sure that these
 const PININT0_DYN_PIN: DynamicPin = DynamicPin::GPIO(31);  // two match!
@@ -137,7 +141,8 @@ const APP: () = {
         pinint0_int:  pin_interrupt::Int<'static, PININT0, PININT0_PIN, MRT0>,
         pinint0_idle: pin_interrupt::Idle<'static>,
 
-        cts: GpioPin<PIO0_8, Output>,
+        rts: GpioPin<PIO0_9, Dynamic>,
+        cts: GpioPin<PIO0_8, Dynamic>,
         red: GpioPin<PIO1_2, Dynamic>,
         green: GpioPin<PIO1_0, Dynamic>,
 
@@ -175,9 +180,8 @@ const APP: () = {
 
         let mut swm_handle = swm.handle.enable(&mut syscon.handle);
 
-        // Configure interrupt for pin connected target's GPIO pin
-        // TODO arghhhhh how do I retrieve my PININT0_PIN here?
-        // wait... can I maybe somehow map/loop over them and init all as dyn? but how? arghhhh
+        // Configure interrupts for pins that could be connected to target's GPIO pins
+        // TODO more elegantly: make all pins dynamic, interruptable
         let green = p.pins.pio1_0.into_dynamic_pin(
             gpio.tokens.pio1_0,
             gpio::Level::High, // make green off by default
@@ -204,7 +208,7 @@ const APP: () = {
             gpio::Level::Low, // make red LED on by default
         );
 
-        let cts = p.pins.pio0_8.into_output_pin(
+        let cts = p.pins.pio0_8.into_dynamic_pin(
             gpio.tokens.pio0_8,
             gpio::Level::Low,
         );
@@ -276,7 +280,10 @@ const APP: () = {
         });
 
         // Configure interrupt for RTS pin
-        let _rts = p.pins.pio0_9.into_input_pin(gpio.tokens.pio0_9);
+        let rts = p.pins.pio0_9.into_dynamic_pin(
+            gpio.tokens.pio0_9,
+            gpio::Level::High, // off by default (shouldn't matter because rts is input)
+        );
         let mut rts_int = pinint
             .interrupts
             .pinint2
@@ -425,6 +432,7 @@ const APP: () = {
             green,
             red,
             cts,
+            rts,
 
             i2c: i2c.slave,
             spi,
@@ -446,6 +454,7 @@ const APP: () = {
             red,
             green,
             cts,
+            rts
         ]
     )]
     fn idle(cx: idle::Context) -> ! {
@@ -456,12 +465,13 @@ const APP: () = {
         let target_tx_dma  = cx.resources.target_tx_dma;
         let target_sync_rx = cx.resources.target_sync_rx_idle;
         let target_sync_tx = cx.resources.target_sync_tx;
-        let pinint0_idle     = cx.resources.pinint0_idle;
-        let green          = cx.resources.green;
+        let pinint0_idle   = cx.resources.pinint0_idle;
+        let green                   = cx.resources.green;
         let blue           = cx.resources.blue_idle;
-        let rts            = cx.resources.target_rts_idle;
+        let target_rts_idle         = cx.resources.target_rts_idle;
         let red            = cx.resources.red;
         let cts            = cx.resources.cts;
+        let rts            = cx.resources.rts;
 // IDEA: add 8 "empty" idle_green + greens (we don't allow more interrupts rn anyway)
 // and then assign interrupts to pins on SetDirection -> Input?
         let mut pins = FnvIndexMap::<_, _, U4>::new();
@@ -600,6 +610,14 @@ const APP: () = {
                             match pin {
                                 DynamicPin::GPIO(29) => red.switch_to_input(),
                                 DynamicPin::GPIO(31) => green.switch_to_input(),
+                                DynamicPin::GPIO(CTS_PIN_NUMBER) => {
+                                    // TODO proper error handling
+                                    rprintln!("CTS pin is never Input");
+                                    unreachable!()
+                                },
+                                DynamicPin::GPIO(RTS_PIN_NUMBER) => {
+                                    rts.switch_to_input()
+                                }
                                 _ => todo!(),
                             };
                             Ok(())
@@ -615,6 +633,12 @@ const APP: () = {
                             match pin {
                                 DynamicPin::GPIO(29) => red.switch_to_output(gpio::Level::Low),
                                 DynamicPin::GPIO(31) => green.switch_to_output(gpio::Level::Low),
+                                DynamicPin::GPIO(CTS_PIN_NUMBER) => cts.switch_to_output(gpio::Level::Low),
+                                DynamicPin::GPIO(RTS_PIN_NUMBER) => {
+                                    // TODO proper error handling
+                                    rprintln!("RTS pin is never Output");
+                                    unreachable!()
+                                }
                                 _ => todo!(),
                             };
                             Ok(())
@@ -622,17 +646,13 @@ const APP: () = {
                         HostToAssistant::ReadDynamicPin(
                             pin::ReadLevel { pin }
                         ) => {
-                            // TODO turn into conversion fn
-                            let pin_number= match pin {
-                                DynamicPin::GPIO(number) => number,
-                                _ => todo!()
-                            };
+                            let pin_number = get_pin_number(pin);
 
                             rprintln!("received READ DYNAMIC PIN command for {:?} | {}", pin, pin_number as usize);
                             rprintln!("dynamic_pins: {:?}", dynamic_pins);
 
                             // TODO: really applicable to all?
-                            let mut result = dynamic_pins
+                            let result = dynamic_pins
                                 .get(&(pin_number as usize))
                                 .map(|&(level, period_ms)| {
                                     pin::ReadLevelResult {
@@ -660,8 +680,8 @@ const APP: () = {
             host_rx.clear_buf();
 
             handle_pin_interrupt_dynamic(pinint0_idle, PININT0_DYN_PIN, &mut dynamic_pins);
+            handle_pin_interrupt_dynamic(target_rts_idle,   DynamicPin::GPIO(RTS_PIN_NUMBER), &mut dynamic_pins);
             handle_pin_interrupt(blue,  InputPin::Blue,  &mut pins);
-            handle_pin_interrupt(rts,   InputPin::Rts,   &mut pins);
 
             // We need this critical section to protect against a race
             // conditions with the interrupt handlers. Otherwise, the following
@@ -711,8 +731,9 @@ const APP: () = {
     }
 
     // TODO rethink thissss xoxo (tomorrow)
-    #[task(binds = PIN_INT0, resources = [pinint0_int])]
+    #[task(binds = PIN_INT0, resources = [pinint0_int])] // TODO xoxo
     fn pinint0(context: pinint0::Context) {
+
         context.resources.pinint0_int.handle_interrupt();
     }
 
@@ -796,10 +817,7 @@ fn handle_pin_interrupt_dynamic(
     while let Some(event) = int.next() {
         match event {
             pin_interrupt::Event { level, period } => {
-                let pin_number= match pin {
-                    DynamicPin::GPIO(number) => number,
-                    _ => todo!()
-                };
+                let pin_number = get_pin_number(pin);
 
                 rprintln!("registered dynamic pin interrupt");
                 let level = match level {
@@ -833,5 +851,13 @@ fn handle_pin_interrupt(
                 pins.insert(pin as usize, (level, period_ms)).unwrap();
             }
         }
+    }
+}
+
+/// Get the index of `pin` as counted on the breakout board (Arduino Style)
+fn get_pin_number(pin: DynamicPin) -> u8 {
+    match pin {
+        DynamicPin::GPIO(number) => number,
+        _ => todo!()
     }
 }
