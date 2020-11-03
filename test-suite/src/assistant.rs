@@ -55,9 +55,7 @@ impl Assistant {
         return s;
     }
 
-    // TODO make more generic: enable test to apply this to all pins, not just red
-    // (same for set_pin_low()/set_pin_high() needed then I guess?)
-    /// TODO add docs
+    /// Make the test-assistant's `pin` an Input pin.
     pub fn set_pin_direction_input(&mut self, pin: DynamicPin) -> Result<(), AssistantSetPinDirectionInputError> {
         match pin {
             DynamicPin::GPIO(pin_number) => {
@@ -72,9 +70,7 @@ impl Assistant {
         }
     }
 
-    // TODO make more generic: enable test to apply this to all pins, not just red and green
-    // (same for set_pin_low()/set_pin_high() needed then I guess?)
-    /// TODO add docs
+    /// Make the test-assistant's `pin` an Output pin.
     pub fn set_pin_direction_output(&mut self, pin: DynamicPin) -> Result<(), AssistantSetPinDirectionOutputError> {
         match pin {
             DynamicPin::GPIO(pin_number) => {
@@ -89,10 +85,11 @@ impl Assistant {
         }
     }
 
-    // TODO make more generic: enable test to apply this to all pins, not just red
-    /// TODO add docs
+    /// Set the test-assistant's `pin` level to High.
+    /// Note that the direction of `pin` must be set to Output first!
+    /// Use `set_pin_direction_output()` for this.
     pub fn set_output_pin_high(&mut self, pin: DynamicPin) -> Result<(), AssistantSetPinHighError> {
-        // TODO assert that pin is in output direction
+        // TODO assert that pin is in output direction (note: we don't store pin state for this here)
         match pin {
             DynamicPin::GPIO(pin_number) => {
                 self.pins.get_mut(&pin_number).unwrap()
@@ -106,8 +103,9 @@ impl Assistant {
         }
     }
 
-    // TODO make more generic: enable test to apply this to all pins, not just red
-    /// TODO add docs
+    /// Set the test-assistant's `pin` level to Low.
+    /// Note that the direction of `pin` must be set to Output first!
+    /// Use `set_pin_direction_output()` for this.
     pub fn set_output_pin_low(&mut self, pin: DynamicPin) -> Result<(), AssistantSetPinLowError> {
         match pin {
             DynamicPin::GPIO(pin_number) => {
@@ -143,10 +141,10 @@ impl Assistant {
     }
 
     /// Indicates whether the GPIO pin `pin` receives a **High** signal from the test target
-    /// Note that `pin` must be set to Input mode first!
+    /// Note that the direction of `pin` must be set to Input first!
+    /// Use `set_pin_direction_input()` for this.
     ///
     /// Uses `pin_state` internally.
-    // TODO make more generic: enable test to apply this to all pins, not just green
     pub fn input_pin_is_high(&mut self, pin: DynamicPin) -> Result<bool, AssistantPinReadError> {
         let pin_state: (pin::Level, Option<u32>);
 
@@ -164,10 +162,10 @@ impl Assistant {
     }
 
     /// Indicates whether the GPIO pin `pin` receives a **Low** signal from the test target
-    /// Note that `pin` must be set to Input mode first!
+    /// Note that the direction of `pin` must be set to Input first!
+    /// Use `set_pin_direction_input()` for this.
     ///
     /// Uses `pin_state` internally.
-    // TODO make more generic: enable test to apply this to all pins, not just green
     pub fn input_pin_is_low(&mut self, pin: DynamicPin) -> Result<bool, AssistantPinReadError> {
         let pin_state: (pin::Level, Option<u32>);
         match pin {
