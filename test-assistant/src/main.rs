@@ -109,8 +109,9 @@ pub const CTS_PIN_NUMBER : u8 = 19;
 /// NOTE TO USERS: adjust the pins in this list to change which pin *could* be used as input pin.
 /// Currently only TODO Input-able pins are supported.
 #[allow(non_camel_case_types)]
-type PININT0_PIN = lpc8xx_hal::pins::PIO1_0;               // make sure that these
-const PININT0_DYN_PIN: DynamicPin = DynamicPin::GPIO(31);  // two match!
+type PININT0_PIN = lpc8xx_hal::pins::PIO1_0;                               // make sure that these
+const PININT0_PIN_NUMBER: u8 = 31;                                         // three
+const PININT0_DYN_PIN: DynamicPin = DynamicPin::GPIO(PININT0_PIN_NUMBER);  // match!
 
 
 #[rtic::app(device = lpc8xx_hal::pac)]
@@ -548,14 +549,14 @@ const APP: () = {
                             // todo nicer and more generic once we start enabling ALL the pins
                             match level {
                                 pin::Level::High => {
-                                    rprintln!("received dynamic HIGH command for {:?}", pin);
+                                    rprintln!("dynamic HIGH for {:?}", pin);
                                     match pin {
                                         DynamicPin::GPIO(29) => red.set_high(),
                                         _ => todo!(),
                                     };
                                 }
                                 pin::Level::Low => {
-                                    rprintln!("received dynamic LOW command for {:?}", pin);
+                                    rprintln!("dynamic LOW for {:?}", pin);
                                     match pin {
                                         DynamicPin::GPIO(29) => red.set_low(),
                                         _ => todo!(),
@@ -567,9 +568,6 @@ const APP: () = {
                         HostToAssistant::ReadPin(
                             pin::ReadLevel { pin }
                         ) => {
-                            rprintln!("HostToAssistant::ReadPin started");
-                            rprintln!("{:?}", pins);
-
                             let result = pins.get(&(pin as usize))
                                 .map(|&(level, period_ms)| {
                                     pin::ReadLevelResult {
@@ -596,9 +594,12 @@ const APP: () = {
                         ) => {
                             rprintln!("received SET DIRECTION -> INPUT command for {:?}.", pin);
                             // todo nicer and more generic once we start enabling ALL the pins
+                            // note: the problem with moving this to a helper is again that pin IDs are
+                            // part of the GPIO type so we can't just move this into a
+                            // fn get_gpio_from_pin_number() -> Option<GpioPin<??, Dynamic>>
                             match pin {
                                 DynamicPin::GPIO(29) => red.switch_to_input(),
-                                DynamicPin::GPIO(31) => green.switch_to_input(),
+                                DynamicPin::GPIO(PININT0_PIN_NUMBER) => green.switch_to_input(),
                                 DynamicPin::GPIO(CTS_PIN_NUMBER) => {
                                     // TODO proper error handling
                                     rprintln!("CTS pin is never Input");
@@ -617,11 +618,11 @@ const APP: () = {
                                 direction: pin::Direction::Output,
                             }
                         ) => {
-                            rprintln!("received SET DIRECTION -> OUTPUT command for {:?}. Default Level is LOW", pin);
+                            rprintln!("SET DIRECTION -> OUTPUT for {:?}. Default Level LOW", pin);
                             // todo nicer and more generic once we start enabling ALL the pins
                             match pin {
                                 DynamicPin::GPIO(29) => red.switch_to_output(gpio::Level::Low),
-                                DynamicPin::GPIO(31) => green.switch_to_output(gpio::Level::Low),
+                                DynamicPin::GPIO(PININT0_PIN_NUMBER) => green.switch_to_output(gpio::Level::Low),
                                 DynamicPin::GPIO(CTS_PIN_NUMBER) => cts.switch_to_output(gpio::Level::Low),
                                 DynamicPin::GPIO(RTS_PIN_NUMBER) => {
                                     // TODO proper error handling
@@ -635,23 +636,38 @@ const APP: () = {
                         HostToAssistant::ReadDynamicPin(
                             pin::ReadLevel { pin }
                         ) => {
-                            // TODO: check if currentpin direction is input, set result to None (or suitable err) if not
-
                             let pin_number = get_pin_number(pin);
-
-                            rprintln!("received READ DYNAMIC PIN command for {:?} | {}", pin, pin_number as usize);
+                            rprintln!("READ DYNAMIC PIN command for {:?} | {}", pin, pin_number as usize);
                             rprintln!("dynamic_pins: {:?}", dynamic_pins);
 
-                            // TODO: really applicable to all?
-                            let result = dynamic_pins
-                                .get(&(pin_number as usize))
-                                .map(|&(level, period_ms)| {
-                                    pin::ReadLevelResult {
-                                        pin,
-                                        level,
-                                        period_ms,
-                                    }
-                                });
+                            // todo nicer and more generic once we start enabling ALL the pins
+                            let pin_is_input: bool = match pin_number {
+                                29 => red.direction_is_input(),
+                                30 => true, // TODO: this is blue; refactor once we've rm'ed it as hardcoded Input pin
+                                PININT0_PIN_NUMBER => green.direction_is_input(),
+                                RTS_PIN_NUMBER => rts.direction_is_input(),
+                                _ => false
+                            };
+
+                            let result = match pin_is_input {
+                                true => {
+                                    // TODO: really applicable to all?
+                                    dynamic_pins
+                                    .get(&(pin_number as usize))
+                                    .map(|&(level, period_ms)| {
+                                        pin::ReadLevelResult {
+                                            pin,
+                                            level,
+                                            period_ms,
+                                        }
+                                    })
+                                }
+                                false => {
+                                    rprintln!("Warning: Can't read pin {:?} #{} since it is configured as output.",
+                                              pin, pin_number as usize);
+                                    None
+                                }
+                            };
 
                             rprintln!("sending read result: {:?}", result);
 
@@ -670,7 +686,7 @@ const APP: () = {
                 .expect("Error processing host request");
             host_rx.clear_buf();
 
-            // TODO only do this for pins that are currently in input direction?
+            // TODO only do this for pins that are currently in input direction
             handle_pin_interrupt_dynamic(pinint0_idle, PININT0_DYN_PIN, &mut dynamic_pins);
             handle_pin_interrupt_dynamic(target_rts_idle, DynamicPin::GPIO(RTS_PIN_NUMBER), &mut dynamic_pins);
             handle_pin_interrupt(blue,  InputPin::Blue,  &mut pins);
@@ -813,7 +829,6 @@ fn handle_pin_interrupt_dynamic(
             pin_interrupt::Event { level, period } => {
                 let pin_number = get_pin_number(pin);
 
-                rprintln!("registered dynamic pin interrupt");
                 let level = match level {
                     gpio::Level::High => pin::Level::High,
                     gpio::Level::Low  => pin::Level::Low,
@@ -849,6 +864,7 @@ fn handle_pin_interrupt(
 }
 
 /// Get the index of `pin` as counted on the breakout board (Arduino Style)
+// TODO return Option instead of panicking here
 fn get_pin_number(pin: DynamicPin) -> u8 {
     match pin {
         DynamicPin::GPIO(number) => number,

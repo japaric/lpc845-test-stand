@@ -115,11 +115,8 @@ fn dynamic_red_led_should_be_toggleable_by_level() -> Result {
 // - attempting to call Input methods on a dynamic Pin set to Output (and vice versa) causes understandable errors
 // - what happens if I call dyn read/write funtions on uninitialized pin?
 
-// TODO make this test green
-// TODO misleading: just empty dynamic_pins for pin when pin direction changes and only call
-// handle_pin_interrupt_dynamic for input pin (or check if pin is input in fn)
 #[test]
-fn dynamic_interrupt_handlers_should_be_deregistered_on_direction_switch() -> Result {
+fn dynamic_interrupt_handlers_should_be_ignored_after_direction_switch() -> Result {
     // SETUP
     let mut test_stand = TestStand::new()?;
     test_stand.assistant.set_pin_direction_input(GRN_LED)?;
@@ -136,7 +133,7 @@ fn dynamic_interrupt_handlers_should_be_deregistered_on_direction_switch() -> Re
 }
 
 // TODO make this test green
-//#[test]
+#[test]
 fn dynamic_input_calls_on_output_direction_should_yield_useful_error() -> Result {
     // SETUP
     let mut test_stand = TestStand::new()?;
