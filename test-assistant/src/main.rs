@@ -635,6 +635,8 @@ const APP: () = {
                         HostToAssistant::ReadDynamicPin(
                             pin::ReadLevel { pin }
                         ) => {
+                            // TODO: check if currentpin direction is input, set result to None (or suitable err) if not
+
                             let pin_number = get_pin_number(pin);
 
                             rprintln!("received READ DYNAMIC PIN command for {:?} | {}", pin, pin_number as usize);
@@ -668,8 +670,9 @@ const APP: () = {
                 .expect("Error processing host request");
             host_rx.clear_buf();
 
+            // TODO only do this for pins that are currently in input direction?
             handle_pin_interrupt_dynamic(pinint0_idle, PININT0_DYN_PIN, &mut dynamic_pins);
-            handle_pin_interrupt_dynamic(target_rts_idle,   DynamicPin::GPIO(RTS_PIN_NUMBER), &mut dynamic_pins);
+            handle_pin_interrupt_dynamic(target_rts_idle, DynamicPin::GPIO(RTS_PIN_NUMBER), &mut dynamic_pins);
             handle_pin_interrupt(blue,  InputPin::Blue,  &mut pins);
 
             // We need this critical section to protect against a race
@@ -797,7 +800,9 @@ const APP: () = {
     }
 };
 
-
+// todo better name
+/// Collect data from all Interrupts that were fired for `pin`
+// TODO why are we even indexining by pin if it's always the same number anyway?
 fn handle_pin_interrupt_dynamic(
     int:  &mut pin_interrupt::Idle,
     pin:  DynamicPin,

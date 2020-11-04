@@ -1,37 +1,22 @@
 /// Test-suite specific error module
-
-
 use host_lib::test_stand::NotConfiguredError;
 
 use super::{
     assistant::{
-        AssistantExpectNothingError,
-        AssistantPinReadError,
-        AssistantSetPinHighError,
-        AssistantSetPinLowError,
-        AssistantSetPinDirectionInputError,
-        AssistantSetPinDirectionOutputError,
-        AssistantUsartSendError,
-        AssistantUsartWaitError,
+        AssistantExpectNothingError, AssistantPinReadError, AssistantSetPinDirectionInputError,
+        AssistantSetPinDirectionOutputError, AssistantSetPinHighError, AssistantSetPinLowError,
+        AssistantUsartSendError, AssistantUsartWaitError,
     },
     target::{
-        TargetI2cError,
-        TargetPinReadError,
-        TargetSetPinHighError,
-        TargetSetPinLowError,
-        TargetSpiError,
-        TargetStartTimerInterruptError,
-        TargetUsartSendError,
-        TargetUsartWaitError,
+        TargetI2cError, TargetPinReadError, TargetSetPinHighError, TargetSetPinLowError,
+        TargetSpiError, TargetStartTimerInterruptError, TargetUsartSendError, TargetUsartWaitError,
         TargetWaitForAddressError,
     },
     test_stand::TestStandInitError,
 };
 
-
 /// Result type specific to this test suite
 pub type Result<T = ()> = std::result::Result<T, Error>;
-
 
 /// Error type specific to this test suite
 #[derive(Debug)]

@@ -1,15 +1,8 @@
-use std::sync::{
-    LockResult,
-    MutexGuard,
-};
+use std::sync::{LockResult, MutexGuard};
 
 use host_lib::test_stand::NotConfiguredError;
 
-use super::{
-    assistant::Assistant,
-    target::Target,
-};
-
+use super::{assistant::Assistant, target::Target};
 
 /// An instance of the test stand
 ///
@@ -17,7 +10,7 @@ use super::{
 pub struct TestStand {
     _guard: LockResult<MutexGuard<'static, ()>>,
 
-    pub target:    Target,
+    pub target: Target,
     pub assistant: Assistant,
 }
 
@@ -30,19 +23,16 @@ impl TestStand {
         // the number of GPIO pins the test assistant has
         let assistant_num_pins: u8 = 40; // TODO find a better place than to hardcode this here
 
-        let test_stand = host_lib::TestStand::new()
-            .map_err(|err| TestStandInitError::Inner(err))?;
+        let test_stand =
+            host_lib::TestStand::new().map_err(|err| TestStandInitError::Inner(err))?;
 
-        Ok(
-            Self {
-                _guard:    test_stand.guard,
-                target:    Target::new(test_stand.target?),
-                assistant: Assistant::new(test_stand.assistant?, assistant_num_pins),
-            }
-        )
+        Ok(Self {
+            _guard: test_stand.guard,
+            target: Target::new(test_stand.target?),
+            assistant: Assistant::new(test_stand.assistant?, assistant_num_pins),
+        })
     }
 }
-
 
 #[derive(Debug)]
 pub enum TestStandInitError {
