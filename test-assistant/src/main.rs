@@ -24,7 +24,7 @@ use lpc8xx_hal::{
     gpio::{
         self,
         GpioPin,
-        direction::{Output, Dynamic},
+        direction::{Dynamic},
     },
     i2c,
     init_state::Enabled,
@@ -533,22 +533,11 @@ const APP: () = {
                         HostToAssistant::SetPin(
                             pin::SetLevel {
                                 pin: OutputPin::Cts,
-                                level: pin::Level::High,
+                                level: _,
                             }
                         ) => {
-                            rprintln!("Setting CTS HIGH");
-                            cts.set_high();
-                            Ok(())
-                        }
-                        HostToAssistant::SetPin(
-                            pin::SetLevel {
-                                pin: OutputPin::Cts,
-                                level: pin::Level::Low,
-                            }
-                        ) => {
-                            rprintln!("Setting CTS LOW");
-                            cts.set_low();
-                            Ok(())
+                            rprintln!("error: CTS is a Dynamic pin");
+                            unreachable!()
                         }
                         HostToAssistant::SetDynamicPin(
                             pin::SetLevel {
