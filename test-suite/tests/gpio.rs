@@ -65,6 +65,7 @@ fn dynamic_red_led_should_be_toggleable_by_pin_direction() -> Result {
     // SETUP
     let mut test_stand = TestStand::new()?;
     // ensure pin is low (-> red led is on) when we start
+    test_stand.assistant.set_pin_direction_output(RED_LED)?;
     test_stand.assistant.set_output_pin_low(RED_LED)?;
 
     // RUN TEST
