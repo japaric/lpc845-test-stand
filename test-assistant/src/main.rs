@@ -93,7 +93,6 @@ use lpc845_messages::{
     AssistantToHost,
     HostToAssistant,
     InputPin,
-    OutputPin,
     DynamicPin,
     UsartMode,
     pin,
@@ -550,11 +549,11 @@ const APP: () = {
                         }
                         HostToAssistant::SetPin(
                             pin::SetLevel {
-                                pin: OutputPin::Cts,
+                                pin: _,
                                 level: _,
                             }
                         ) => {
-                            rprintln!("error: CTS is a Dynamic pin");
+                            // currently we don't have defined any non-dynamic Input Pins that could be set
                             unreachable!()
                         }
                         HostToAssistant::SetDynamicPin(
@@ -563,22 +562,43 @@ const APP: () = {
                                 level,
                             }
                         ) => {
-                            // todo nicer and more generic once we start enabling ALL the pins
-                            match level {
-                                pin::Level::High => {
-                                    rprintln!("dynamic HIGH for {:?}", pin);
-                                    match pin {
-                                        DynamicPin::GPIO(29) => red.set_high(),
-                                        _ => todo!(),
-                                    };
+                            // todo nicer and more generic once we resolve the Pin Type Conundrum
+                            let pin_is_output: bool = match pin {
+                                DynamicPin::GPIO(29) => red.direction_is_output(),
+                                PININT0_DYN_PIN => pinint0_pin.direction_is_output(),
+                                PININT1_DYN_PIN => pinint1_pin.direction_is_output(),
+                                DynamicPin::GPIO(CTS_PIN_NUMBER) => cts.direction_is_output(),
+                                _ => false
+                            };
+
+                            if pin_is_output {
+                                // todo nicer and more generic once we resolve the Pin Type Conundrum
+                                match level {
+                                    pin::Level::High => {
+                                        rprintln!("dynamic HIGH for {:?}", pin);
+                                        match pin {
+                                            DynamicPin::GPIO(29) => red.set_high(),
+                                            PININT0_DYN_PIN => pinint0_pin.set_high(),
+                                            PININT1_DYN_PIN => pinint1_pin.set_high(),
+                                            DynamicPin::GPIO(RTS_PIN_NUMBER) => cts.set_high(),
+                                            _ => todo!(),
+                                        };
+                                    }
+                                    pin::Level::Low => {
+                                        rprintln!("dynamic LOW for {:?}", pin);
+                                        match pin {
+                                            DynamicPin::GPIO(29) => red.set_low(),
+                                            PININT0_DYN_PIN => pinint0_pin.set_low(),
+                                            PININT1_DYN_PIN => pinint1_pin.set_low(),
+                                            DynamicPin::GPIO(RTS_PIN_NUMBER) => cts.set_low(),
+                                            _ => todo!(),
+                                        };
+                                    }
                                 }
-                                pin::Level::Low => {
-                                    rprintln!("dynamic LOW for {:?}", pin);
-                                    match pin {
-                                        DynamicPin::GPIO(29) => red.set_low(),
-                                        _ => todo!(),
-                                    };
-                                }
+                            }
+                            else {
+                                rprintln!("Warning: Can't set pin #{} since it is configured as input.",
+                                          get_pin_number(pin) );
                             }
                             Ok(())
                         }
@@ -609,11 +629,12 @@ const APP: () = {
                                 direction: pin::Direction::Input,
                             }
                         ) => {
-                            rprintln!("received SET DIRECTION -> INPUT command for {:?}.", pin);
+                            rprintln!("SET DIRECTION -> INPUT for {:?}.", pin);
                             // todo nicer and more generic once we start enabling ALL the pins
                             // note: the problem with moving this to a helper is again that pin IDs are
                             // part of the GPIO type so we can't just move this into a
                             // fn get_gpio_from_pin_number() -> Option<GpioPin<??, Dynamic>>
+                            // (I'll call this the in Type Conundrum for now)
                             match pin {
                                 DynamicPin::GPIO(29) => red.switch_to_input(),
                                 PININT0_DYN_PIN => pinint0_pin.switch_to_input(),
@@ -659,7 +680,7 @@ const APP: () = {
                             rprintln!("READ DYNAMIC PIN command for {:?}", pin);
                             rprintln!("dynamic_pins: {:?}", dynamic_pins);
 
-                            // todo nicer and more generic once we start enabling ALL the pins
+                            // todo nicer and more generic once we resolve the Pin Type Conundrum
                             let pin_is_input: bool = match pin {
                                 DynamicPin::GPIO(29) => red.direction_is_input(),
                                 PININT0_DYN_PIN => pinint0_pin.direction_is_input(),
@@ -684,9 +705,8 @@ const APP: () = {
                                     })
                                 }
                                 false => {
-                                    let pin_number = get_pin_number(pin);
                                     rprintln!("Warning: Can't read pin #{} since it is configured as output.",
-                                              pin_number);
+                                              get_pin_number(pin));
                                     None
                                 }
                             };
@@ -708,7 +728,7 @@ const APP: () = {
                 .expect("Error processing host request");
             host_rx.clear_buf();
 
-            // TODO only do this for pins that are currently in input direction
+            // TODO only do this for pins that are currently in input direction?
             handle_pin_interrupt_dynamic(pinint0_idle, PININT0_DYN_PIN, &mut dynamic_pins);
             handle_pin_interrupt_dynamic(pinint1_idle,  PININT0_DYN_PIN, &mut dynamic_pins);
             handle_pin_interrupt_dynamic(target_rts_idle, DynamicPin::GPIO(RTS_PIN_NUMBER), &mut dynamic_pins);
