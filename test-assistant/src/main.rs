@@ -32,6 +32,7 @@ use lpc8xx_hal::{
         MRT0,
         MRT1,
         MRT2,
+        MRT3,
     },
     nb::{
         self,
@@ -49,6 +50,7 @@ use lpc8xx_hal::{
         PININT0,
         PININT1,
         PININT2,
+        PININT3,
     },
     pins::{
         PIO0_8,
@@ -143,6 +145,9 @@ const APP: () = {
         pinint0_int:  pin_interrupt::Int<'static, PININT0, PININT0_PIN, MRT0>,
         pinint0_idle: pin_interrupt::Idle<'static>,
 
+        pinint3_int:  pin_interrupt::Int<'static, PININT3, PININT3_PIN, MRT3>,
+        pinint3_idle: pin_interrupt::Idle<'static>,
+
         rts: GpioPin<PIO0_9, Dynamic>,
         cts: GpioPin<PIO0_8, Dynamic>,
         pinint0_pin: GpioPin<PININT0_PIN, Dynamic>, // pin that triggers PININT0 interrupt
@@ -164,6 +169,7 @@ const APP: () = {
         static mut TARGET_SYNC: Usart = Usart::new();
 
         static mut INT0:         PinInterrupt = PinInterrupt::new();
+        static mut INT3:         PinInterrupt = PinInterrupt::new();
         static mut TARGET_TIMER: PinInterrupt = PinInterrupt::new();
         static mut RTS:          PinInterrupt = PinInterrupt::new();
 
@@ -197,8 +203,15 @@ const APP: () = {
 
         let pinint3_pin = p.pins.pio1_2.into_dynamic_pin(
             gpio.tokens.pio1_2,
-            gpio::Level::Low, // make red LED on by default
+            gpio::Level::Low, // make red LED on by default // todo what if this is low by default
         );
+
+        let mut pinint3_int = pinint
+            .interrupts
+            .pinint3
+            .select::<PININT3_PIN>(&mut syscon.handle);
+        pinint3_int.enable_rising_edge();
+        pinint3_int.enable_falling_edge();
 
         // Configure interrupt for pin connected to target's timer interrupt pin
         let _target_timer = p.pins.pio1_1.into_input_pin(gpio.tokens.pio1_1);
@@ -346,6 +359,7 @@ const APP: () = {
             TARGET_SYNC.init(target_sync);
 
         let (pinint0_int, pinint0_idle) = INT0.init(pinint0_int, timers.mrt0);
+        let (pinint3_int, pinint3_idle) = INT3.init(pinint3_int, timers.mrt3);
         let (target_timer_int, target_timer_idle) = TARGET_TIMER.init(target_timer_int, timers.mrt1);
 
         // Assign I2C0 pin functions
@@ -430,6 +444,9 @@ const APP: () = {
             pinint0_int,
             pinint0_idle,
 
+            pinint3_int,
+            pinint3_idle,
+
             pinint0_pin,
             pinint3_pin,
             cts,
@@ -450,6 +467,7 @@ const APP: () = {
             target_sync_rx_idle,
             target_sync_tx,
             pinint0_idle,
+            pinint3_idle,
             target_timer_idle,
             target_rts_idle,
             pinint3_pin,
@@ -468,8 +486,9 @@ const APP: () = {
         let target_sync_tx = cx.resources.target_sync_tx;
         let target_timer_idle       = cx.resources.target_timer_idle;
         let pinint0_idle   = cx.resources.pinint0_idle;
-        let pinint0_pin             = cx.resources.pinint0_pin;
+        let pinint3_idle   = cx.resources.pinint3_idle;
         let target_rts_idle= cx.resources.target_rts_idle;
+        let pinint0_pin             = cx.resources.pinint0_pin;
         let pinint3_pin             = cx.resources.pinint3_pin;
         let cts            = cx.resources.cts;
         let rts            = cx.resources.rts;
@@ -707,6 +726,7 @@ const APP: () = {
 
             // TODO only do this for pins that are currently in input direction?
             handle_pin_interrupt_dynamic(pinint0_idle, PININT0_DYN_PIN, &mut dynamic_pins);
+            handle_pin_interrupt_dynamic(pinint3_idle, PININT3_DYN_PIN, &mut dynamic_pins);
             handle_pin_interrupt_dynamic(target_rts_idle, DynamicPin::GPIO(RTS_PIN_NUMBER), &mut dynamic_pins);
             handle_pin_interrupt(target_timer_idle, InputPin::TargetTimer, &mut pins);
 
@@ -757,9 +777,13 @@ const APP: () = {
             .expect("Error receiving from USART3");
     }
 
+    #[task(binds = PIN_INT3, resources = [pinint3_int])]
+    fn pinint3(context: pinint3::Context) {
+        context.resources.pinint3_int.handle_interrupt();
+    }
+
     #[task(binds = PIN_INT0, resources = [pinint0_int])]
     fn pinint0(context: pinint0::Context) {
-
         context.resources.pinint0_int.handle_interrupt();
     }
 

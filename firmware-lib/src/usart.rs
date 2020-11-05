@@ -16,7 +16,7 @@ pub use self::{
 
 use heapless::{
     Vec,
-    consts::U256,
+    consts::U64,
     spsc,
 };
 use lpc8xx_hal::{
@@ -83,4 +83,5 @@ impl Usart {
 // It would be nice to make the queue capacity configurable, but that would
 // require a generic with trait bound on all the structs. As of this writing,
 // `const fn`s with trait bounds are unstable, so we can't do it yet.
-type QueueCap = U256;
+// note: capacity lowered from U256 to make space for another interruptable pin
+type QueueCap = U64;

@@ -169,6 +169,15 @@ These are just some suggestions. Please feel free to add more, if you experience
 [#46]: https://github.com/braun-embedded/lpc845-test-stand/issues/46
 
 
+### Dynamic pin constraints
+Dynamic pins are pins whose direction (Input, Output) you can toggle from unit tests. Then, you can use them just like you would a fixed In/Output pin.
+
+- only the test-assistant firmware supports dynamic pins
+- you can only use pins number 29 and 32 (RED/GREEN LED) as dynamic pins
+- you can only configure these two pins as input pins from a test. Level changes on these pins will trigger interrupts INT3 and INT0 respectively.
+
+These are to be resolved in the future so you can have multiple run-time configurable GPIO pins and also reconfigure UART.
+
 ## License
 
 Code in this repository, unless specifically noted otherwise, is available under the terms under the [0BSD License]. This essentially means you can do what you want with it, without any restrictions.
