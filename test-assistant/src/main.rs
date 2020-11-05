@@ -132,8 +132,8 @@ const APP: () = {
         target_sync_rx_idle: RxIdle<'static>,
         target_sync_tx:      Tx<USART3, SyncMode>,
 
-        blue_int:  pin_interrupt::Int<'static, PININT1, PIO1_1, MRT1>,
-        blue_idle: pin_interrupt::Idle<'static>,
+        target_timer_int:  pin_interrupt::Int<'static, PININT1, PIO1_1, MRT1>,
+        target_timer_idle: pin_interrupt::Idle<'static>,
 
         pinint0_int:  pin_interrupt::Int<'static, PININT0, PININT0_PIN, MRT0>,
         pinint0_idle: pin_interrupt::Idle<'static>,
@@ -158,9 +158,9 @@ const APP: () = {
         static mut TARGET:      Usart = Usart::new();
         static mut TARGET_SYNC: Usart = Usart::new();
 
-        static mut INT0: PinInterrupt = PinInterrupt::new();
-        static mut BLUE:  PinInterrupt = PinInterrupt::new();
-        static mut RTS:   PinInterrupt = PinInterrupt::new();
+        static mut INT0:         PinInterrupt = PinInterrupt::new();
+        static mut TARGET_TIMER: PinInterrupt = PinInterrupt::new();
+        static mut RTS:          PinInterrupt = PinInterrupt::new();
 
         rtt_target::rtt_init_print!();
         rprintln!("Starting assistant.");
@@ -192,13 +192,13 @@ const APP: () = {
         pinint0_int.enable_falling_edge();
 
         // Configure interrupt for pin connected to target's timer interrupt pin
-        let _blue = p.pins.pio1_1.into_input_pin(gpio.tokens.pio1_1);
-        let mut blue_int = pinint
+        let _target_timer = p.pins.pio1_1.into_input_pin(gpio.tokens.pio1_1);
+        let mut target_timer_int = pinint
             .interrupts
             .pinint1
             .select::<PIO1_1>(&mut syscon.handle);
-        blue_int.enable_rising_edge();
-        blue_int.enable_falling_edge();
+        target_timer_int.enable_rising_edge();
+        target_timer_int.enable_falling_edge();
 
         let red = p.pins.pio1_2.into_dynamic_pin(
             gpio.tokens.pio1_2,
@@ -342,7 +342,7 @@ const APP: () = {
             TARGET_SYNC.init(target_sync);
 
         let (pinint0_int, pinint0_idle) = INT0.init(pinint0_int, timers.mrt0);
-        let (blue_int,  blue_idle)  = BLUE.init(blue_int, timers.mrt1);
+        let (target_timer_int, target_timer_idle) = TARGET_TIMER.init(target_timer_int, timers.mrt1);
 
         // Assign I2C0 pin functions
         let (i2c0_sda, _) = swm.fixed_functions.i2c0_sda
@@ -420,11 +420,11 @@ const APP: () = {
             target_sync_rx_idle,
             target_sync_tx,
 
+            target_timer_int,
+            target_timer_idle,
+
             pinint0_int,
             pinint0_idle,
-
-            blue_int,
-            blue_idle,
 
             pinint0_pin,
             red,
@@ -446,7 +446,7 @@ const APP: () = {
             target_sync_rx_idle,
             target_sync_tx,
             pinint0_idle,
-            blue_idle,
+            target_timer_idle,
             target_rts_idle,
             red,
             pinint0_pin,
@@ -462,10 +462,10 @@ const APP: () = {
         let target_tx_dma  = cx.resources.target_tx_dma;
         let target_sync_rx = cx.resources.target_sync_rx_idle;
         let target_sync_tx = cx.resources.target_sync_tx;
+        let target_timer_idle       = cx.resources.target_timer_idle;
         let pinint0_idle   = cx.resources.pinint0_idle;
-        let pinint0_pin                   = cx.resources.pinint0_pin;
-        let blue           = cx.resources.blue_idle;
-        let target_rts_idle         = cx.resources.target_rts_idle;
+        let pinint0_pin             = cx.resources.pinint0_pin;
+        let target_rts_idle= cx.resources.target_rts_idle;
         let red            = cx.resources.red;
         let cts            = cx.resources.cts;
         let rts            = cx.resources.rts;
@@ -546,7 +546,6 @@ const APP: () = {
                             let pin_is_output: bool = match pin {
                                 DynamicPin::GPIO(29) => red.direction_is_output(),
                                 PININT0_DYN_PIN => pinint0_pin.direction_is_output(),
-                                PININT1_DYN_PIN => pinint1_pin.direction_is_output(),
                                 DynamicPin::GPIO(CTS_PIN_NUMBER) => cts.direction_is_output(),
                                 _ => false
                             };
@@ -559,7 +558,6 @@ const APP: () = {
                                         match pin {
                                             DynamicPin::GPIO(29) => red.set_high(),
                                             PININT0_DYN_PIN => pinint0_pin.set_high(),
-                                            PININT1_DYN_PIN => pinint1_pin.set_high(),
                                             DynamicPin::GPIO(RTS_PIN_NUMBER) => cts.set_high(),
                                             _ => todo!(),
                                         };
@@ -569,7 +567,6 @@ const APP: () = {
                                         match pin {
                                             DynamicPin::GPIO(29) => red.set_low(),
                                             PININT0_DYN_PIN => pinint0_pin.set_low(),
-                                            PININT1_DYN_PIN => pinint1_pin.set_low(),
                                             DynamicPin::GPIO(RTS_PIN_NUMBER) => cts.set_low(),
                                             _ => todo!(),
                                         };
@@ -660,7 +657,6 @@ const APP: () = {
                             // todo nicer and more generic once we resolve the Pin Type Conundrum
                             let pin_is_input: bool = match pin {
                                 DynamicPin::GPIO(29) => red.direction_is_input(),
-                                DynamicPin::GPIO(30) => true, // TODO: this is blue; refactor once we've rm'ed it as hardcoded Input pin
                                 PININT0_DYN_PIN => pinint0_pin.direction_is_input(),
                                 DynamicPin::GPIO(RTS_PIN_NUMBER) => rts.direction_is_input(),
                                 _ => false
@@ -708,7 +704,7 @@ const APP: () = {
             // TODO only do this for pins that are currently in input direction?
             handle_pin_interrupt_dynamic(pinint0_idle, PININT0_DYN_PIN, &mut dynamic_pins);
             handle_pin_interrupt_dynamic(target_rts_idle, DynamicPin::GPIO(RTS_PIN_NUMBER), &mut dynamic_pins);
-            handle_pin_interrupt(blue,  InputPin::Blue,  &mut pins);
+            handle_pin_interrupt(target_timer_idle, InputPin::TargetTimer, &mut pins);
 
             // We need this critical section to protect against a race
             // conditions with the interrupt handlers. Otherwise, the following
@@ -763,9 +759,9 @@ const APP: () = {
         context.resources.pinint0_int.handle_interrupt();
     }
 
-    #[task(binds = PIN_INT1, resources = [blue_int])]
+    #[task(binds = PIN_INT1, resources = [target_timer_int])]
     fn pinint1(context: pinint1::Context) {
-        context.resources.blue_int.handle_interrupt();
+        context.resources.target_timer_int.handle_interrupt();
     }
 
     #[task(binds = PIN_INT2, resources = [target_rts_int])]

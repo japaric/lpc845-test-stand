@@ -277,7 +277,8 @@ impl Assistant {
         }
     }
 
-    /// Measures the period of changes in a GPIO signal on pin number 30 / PIO1_1 / BLUE LED
+    /// Measures the period of changes triggered by the target Timer interrupt signal
+    /// on pin number 30 / PIO1_1
     ///
     /// Waits for changes in the GPIO signal until the given number of samples
     /// has been measured. Returns the minimum and maximum period measured, in
@@ -294,19 +295,19 @@ impl Assistant {
     ) -> Result<GpioPeriodMeasurement, AssistantPinReadError> {
         assert!(samples > 0);
 
-        let blue_led_pin_number = 30;
+        let target_timer_pin_number = 30;
         let mut measurement: Option<GpioPeriodMeasurement> = None;
 
         let (mut state, _) = self
             .pins
-            .get_mut(&blue_led_pin_number)
+            .get_mut(&target_timer_pin_number)
             .unwrap()
             .read_level::<HostToAssistant, AssistantToHost>(timeout, &mut self.conn)?;
 
         for _ in 0..samples {
             let (new_state, period_ms) =
                 self.pins
-                    .get_mut(&blue_led_pin_number)
+                    .get_mut(&target_timer_pin_number)
                     .unwrap()
                     .read_level::<HostToAssistant, AssistantToHost>(timeout, &mut self.conn)?;
             print!("{:?}, {:?}\n", new_state, period_ms);
