@@ -54,7 +54,6 @@ use lpc8xx_hal::{
         PIO0_8,
         PIO0_9,
         PIO1_1,
-        PIO1_2,
     },
     spi::{
         self,
@@ -101,14 +100,20 @@ use lpc845_messages::{
 
 // TODO find a place to share them with t-s and t-t?
 /// some commonly used pin numbers
-pub const RTS_PIN_NUMBER : u8 = 18;
-pub const CTS_PIN_NUMBER : u8 = 19;
+const RTS_PIN_NUMBER : u8 = 18;
+const CTS_PIN_NUMBER : u8 = 19;
+const RED_LED_PIN_NUMBER : u8 = 29;
+const GREEN_LED_PIN_NUMBER : u8 = 31;
 
 /// NOTE TO USERS: adjust the pins in this list to change which pin *could* be used as input pin.
 /// Currently only TODO Input-able pins are supported.
 #[allow(non_camel_case_types)]
-type PININT0_PIN = lpc8xx_hal::pins::PIO1_0;               // make sure that these
-const PININT0_DYN_PIN: DynamicPin = DynamicPin::GPIO(31);  // two match!
+type PININT0_PIN = lpc8xx_hal::pins::PIO1_0;                                 // make sure that these
+const PININT0_DYN_PIN: DynamicPin = DynamicPin::GPIO(GREEN_LED_PIN_NUMBER);  // two match!
+
+#[allow(non_camel_case_types)]
+type PININT3_PIN = lpc8xx_hal::pins::PIO1_2;                                  // make sure that these
+const PININT3_DYN_PIN : DynamicPin = DynamicPin::GPIO(RED_LED_PIN_NUMBER);    // two match!
 
 #[rtic::app(device = lpc8xx_hal::pac)]
 const APP: () = {
@@ -140,8 +145,8 @@ const APP: () = {
 
         rts: GpioPin<PIO0_9, Dynamic>,
         cts: GpioPin<PIO0_8, Dynamic>,
-        red: GpioPin<PIO1_2, Dynamic>,
-        pinint0_pin: GpioPin<PININT0_PIN, Dynamic>, // pin that can be read by PININT0 interrupt
+        pinint0_pin: GpioPin<PININT0_PIN, Dynamic>, // pin that triggers PININT0 interrupt
+        pinint3_pin: GpioPin<PININT3_PIN, Dynamic>, // pin that triggers PININT3 interrupt
 
         i2c: i2c::Slave<I2C0, Enabled<PhantomData<IOSC>>, Enabled>,
         spi: SPI<SPI0, Enabled<spi::Slave>>,
@@ -183,13 +188,17 @@ const APP: () = {
             gpio.tokens.pio1_0,
             gpio::Level::High, // off by default
         );
-
         let mut pinint0_int = pinint
             .interrupts
             .pinint0
             .select::<PININT0_PIN>(&mut syscon.handle);
         pinint0_int.enable_rising_edge();
         pinint0_int.enable_falling_edge();
+
+        let pinint3_pin = p.pins.pio1_2.into_dynamic_pin(
+            gpio.tokens.pio1_2,
+            gpio::Level::Low, // make red LED on by default
+        );
 
         // Configure interrupt for pin connected to target's timer interrupt pin
         let _target_timer = p.pins.pio1_1.into_input_pin(gpio.tokens.pio1_1);
@@ -199,11 +208,6 @@ const APP: () = {
             .select::<PIO1_1>(&mut syscon.handle);
         target_timer_int.enable_rising_edge();
         target_timer_int.enable_falling_edge();
-
-        let red = p.pins.pio1_2.into_dynamic_pin(
-            gpio.tokens.pio1_2,
-            gpio::Level::Low, // make red LED on by default
-        );
 
         let cts = p.pins.pio0_8.into_dynamic_pin(
             gpio.tokens.pio0_8,
@@ -427,7 +431,7 @@ const APP: () = {
             pinint0_idle,
 
             pinint0_pin,
-            red,
+            pinint3_pin,
             cts,
             rts,
 
@@ -448,7 +452,7 @@ const APP: () = {
             pinint0_idle,
             target_timer_idle,
             target_rts_idle,
-            red,
+            pinint3_pin,
             pinint0_pin,
             cts,
             rts
@@ -466,7 +470,7 @@ const APP: () = {
         let pinint0_idle   = cx.resources.pinint0_idle;
         let pinint0_pin             = cx.resources.pinint0_pin;
         let target_rts_idle= cx.resources.target_rts_idle;
-        let red            = cx.resources.red;
+        let pinint3_pin             = cx.resources.pinint3_pin;
         let cts            = cx.resources.cts;
         let rts            = cx.resources.rts;
 // IDEA: add 8 "empty" idle_green + greens (we don't allow more interrupts rn anyway)
@@ -544,7 +548,7 @@ const APP: () = {
                         ) => {
                             // todo nicer and more generic once we resolve the Pin Type Conundrum
                             let pin_is_output: bool = match pin {
-                                DynamicPin::GPIO(29) => red.direction_is_output(),
+                                PININT3_DYN_PIN => pinint3_pin.direction_is_output(),
                                 PININT0_DYN_PIN => pinint0_pin.direction_is_output(),
                                 DynamicPin::GPIO(CTS_PIN_NUMBER) => cts.direction_is_output(),
                                 _ => false
@@ -556,7 +560,7 @@ const APP: () = {
                                     pin::Level::High => {
                                         rprintln!("dynamic HIGH for {:?}", pin);
                                         match pin {
-                                            DynamicPin::GPIO(29) => red.set_high(),
+                                            PININT3_DYN_PIN => pinint3_pin.set_high(),
                                             PININT0_DYN_PIN => pinint0_pin.set_high(),
                                             DynamicPin::GPIO(RTS_PIN_NUMBER) => cts.set_high(),
                                             _ => todo!(),
@@ -565,7 +569,7 @@ const APP: () = {
                                     pin::Level::Low => {
                                         rprintln!("dynamic LOW for {:?}", pin);
                                         match pin {
-                                            DynamicPin::GPIO(29) => red.set_low(),
+                                            PININT3_DYN_PIN => pinint3_pin.set_low(),
                                             PININT0_DYN_PIN => pinint0_pin.set_low(),
                                             DynamicPin::GPIO(RTS_PIN_NUMBER) => cts.set_low(),
                                             _ => todo!(),
@@ -613,7 +617,7 @@ const APP: () = {
                             // fn get_gpio_from_pin_number() -> Option<GpioPin<??, Dynamic>>
                             // (I'll call this the in Type Conundrum for now)
                             match pin {
-                                DynamicPin::GPIO(29) => red.switch_to_input(),
+                                PININT3_DYN_PIN => pinint3_pin.switch_to_input(),
                                 PININT0_DYN_PIN => pinint0_pin.switch_to_input(),
                                 DynamicPin::GPIO(CTS_PIN_NUMBER) => {
                                     // TODO proper error handling
@@ -636,7 +640,7 @@ const APP: () = {
                             rprintln!("SET DIRECTION -> OUTPUT for {:?}. Default Level LOW", pin);
                             // todo nicer and more generic once we start enabling ALL the pins
                             match pin {
-                                DynamicPin::GPIO(29) => red.switch_to_output(gpio::Level::Low),
+                                PININT3_DYN_PIN => pinint3_pin.switch_to_output(gpio::Level::Low),
                                 PININT0_DYN_PIN => pinint0_pin.switch_to_output(gpio::Level::Low),
                                 DynamicPin::GPIO(CTS_PIN_NUMBER) => cts.switch_to_output(gpio::Level::Low),
                                 DynamicPin::GPIO(RTS_PIN_NUMBER) => {
@@ -656,7 +660,7 @@ const APP: () = {
 
                             // todo nicer and more generic once we resolve the Pin Type Conundrum
                             let pin_is_input: bool = match pin {
-                                DynamicPin::GPIO(29) => red.direction_is_input(),
+                                PININT3_DYN_PIN => pinint3_pin.direction_is_input(),
                                 PININT0_DYN_PIN => pinint0_pin.direction_is_input(),
                                 DynamicPin::GPIO(RTS_PIN_NUMBER) => rts.direction_is_input(),
                                 _ => false
