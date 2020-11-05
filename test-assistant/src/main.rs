@@ -32,7 +32,6 @@ use lpc8xx_hal::{
         MRT0,
         MRT1,
         MRT2,
-        MRT3,
     },
     nb::{
         self,
@@ -50,11 +49,12 @@ use lpc8xx_hal::{
         PININT0,
         PININT1,
         PININT2,
-        PININT3,
     },
     pins::{
         PIO0_8,
         PIO0_9,
+        PIO1_1,
+        PIO1_2,
     },
     spi::{
         self,
@@ -101,29 +101,14 @@ use lpc845_messages::{
 
 // TODO find a place to share them with t-s and t-t?
 /// some commonly used pin numbers
-const RTS_PIN_NUMBER : u8 = 18;
-const CTS_PIN_NUMBER : u8 = 19;
-const RED_LED_PIN_NUMBER : u8 = 29;
-const GREEN_LED_PIN_NUMBER : u8 = 31;
+pub const RTS_PIN_NUMBER : u8 = 18;
+pub const CTS_PIN_NUMBER : u8 = 19;
 
+/// NOTE TO USERS: adjust the pins in this list to change which pin *could* be used as input pin.
+/// Currently only TODO Input-able pins are supported.
 #[allow(non_camel_case_types)]
-type TARGET_TIMER_PININT_PIN = lpc8xx_hal::pins::PIO1_1;
-const TARGET_TIMER_DYN_PIN : DynamicPin = DynamicPin::GPIO(30);
-
-/// Defines the Dynamic pins that trigger Interrupts on Level change when set to Input
-/// Currently only two pins are supported.
-// TODO: the pin numbers are actually hardcoded in init() still because p.pins is being stubborn
-
-// Pin that triggers PIN_INT0 on Level change
-#[allow(non_camel_case_types)]
-type PININT0_PIN = lpc8xx_hal::pins::PIO1_0;                                  // make sure that these
-const PININT0_DYN_PIN : DynamicPin = DynamicPin::GPIO(GREEN_LED_PIN_NUMBER);  // two match!
-
-// Pin that triggers PIN_INT3 on Level change
-#[allow(non_camel_case_types)]
-type PININT3_PIN = lpc8xx_hal::pins::PIO1_2;                                  // make sure that these
-const PININT3_DYN_PIN : DynamicPin = DynamicPin::GPIO(RED_LED_PIN_NUMBER);    // two match!
-
+type PININT0_PIN = lpc8xx_hal::pins::PIO1_0;               // make sure that these
+const PININT0_DYN_PIN: DynamicPin = DynamicPin::GPIO(31);  // two match!
 
 #[rtic::app(device = lpc8xx_hal::pac)]
 const APP: () = {
@@ -147,20 +132,16 @@ const APP: () = {
         target_sync_rx_idle: RxIdle<'static>,
         target_sync_tx:      Tx<USART3, SyncMode>,
 
-        target_timer_int:  pin_interrupt::Int<'static, PININT1, TARGET_TIMER_PININT_PIN, MRT1>,
+        target_timer_int:  pin_interrupt::Int<'static, PININT1, PIO1_1, MRT1>,
         target_timer_idle: pin_interrupt::Idle<'static>,
-        target_timer_pin: GpioPin<TARGET_TIMER_PININT_PIN, Dynamic>, // TODO making this Dynamic was a bad choice
 
         pinint0_int:  pin_interrupt::Int<'static, PININT0, PININT0_PIN, MRT0>,
         pinint0_idle: pin_interrupt::Idle<'static>,
 
-        pinint3_int:  pin_interrupt::Int<'static, PININT3, PININT3_PIN, MRT3>,
-        pinint3_idle: pin_interrupt::Idle<'static>,
-
-        pinint0_pin: GpioPin<PININT0_PIN, Dynamic>, // pin that triggers PININT0 on Level change
-        pinint3_pin: GpioPin<PININT3_PIN, Dynamic>, // pin that triggers PININT3 on Level change
         rts: GpioPin<PIO0_9, Dynamic>,
         cts: GpioPin<PIO0_8, Dynamic>,
+        red: GpioPin<PIO1_2, Dynamic>,
+        pinint0_pin: GpioPin<PININT0_PIN, Dynamic>, // pin that can be read by PININT0 interrupt
 
         i2c: i2c::Slave<I2C0, Enabled<PhantomData<IOSC>>, Enabled>,
         spi: SPI<SPI0, Enabled<spi::Slave>>,
@@ -178,7 +159,6 @@ const APP: () = {
         static mut TARGET_SYNC: Usart = Usart::new();
 
         static mut INT0:         PinInterrupt = PinInterrupt::new();
-        static mut INT3:         PinInterrupt = PinInterrupt::new();
         static mut TARGET_TIMER: PinInterrupt = PinInterrupt::new();
         static mut RTS:          PinInterrupt = PinInterrupt::new();
 
@@ -203,6 +183,7 @@ const APP: () = {
             gpio.tokens.pio1_0,
             gpio::Level::High, // off by default
         );
+
         let mut pinint0_int = pinint
             .interrupts
             .pinint0
@@ -210,31 +191,19 @@ const APP: () = {
         pinint0_int.enable_rising_edge();
         pinint0_int.enable_falling_edge();
 
-        let pinint3_pin = p.pins.pio1_2.into_dynamic_pin(
-            gpio.tokens.pio1_2,
-            gpio::Level::High, // off by default
-        );
-        let mut pinint3_int = pinint
-            .interrupts
-            .pinint3
-            .select::<PININT3_PIN>(&mut syscon.handle);
-        pinint3_int.enable_rising_edge();
-        pinint3_int.enable_falling_edge();
-
-
         // Configure interrupt for pin connected to target's timer interrupt pin
-        // TODO: I've made this a dynamic pin for my convenience (msg handling here, pin handling
-        // in assistant.rs) but I'm regretting this choice because it just adds unnecessary danger zones
-        let target_timer_pin = p.pins.pio1_1.into_dynamic_pin(
-            gpio.tokens.pio1_1,
-            gpio::Level::High, // off by default, shouldn't matter since this is input always
-        );
+        let _target_timer = p.pins.pio1_1.into_input_pin(gpio.tokens.pio1_1);
         let mut target_timer_int = pinint
             .interrupts
             .pinint1
-            .select::<TARGET_TIMER_PININT_PIN>(&mut syscon.handle);
+            .select::<PIO1_1>(&mut syscon.handle);
         target_timer_int.enable_rising_edge();
         target_timer_int.enable_falling_edge();
+
+        let red = p.pins.pio1_2.into_dynamic_pin(
+            gpio.tokens.pio1_2,
+            gpio::Level::Low, // make red LED on by default
+        );
 
         let cts = p.pins.pio0_8.into_dynamic_pin(
             gpio.tokens.pio0_8,
@@ -373,7 +342,6 @@ const APP: () = {
             TARGET_SYNC.init(target_sync);
 
         let (pinint0_int, pinint0_idle) = INT0.init(pinint0_int, timers.mrt0);
-        let (pinint3_int, pinint3_idle) = INT3.init(pinint3_int, timers.mrt3);
         let (target_timer_int, target_timer_idle) = TARGET_TIMER.init(target_timer_int, timers.mrt1);
 
         // Assign I2C0 pin functions
@@ -458,12 +426,8 @@ const APP: () = {
             pinint0_int,
             pinint0_idle,
 
-            pinint3_int,
-            pinint3_idle,
-
             pinint0_pin,
-            pinint3_pin,
-            target_timer_pin,
+            red,
             cts,
             rts,
 
@@ -482,12 +446,10 @@ const APP: () = {
             target_sync_rx_idle,
             target_sync_tx,
             pinint0_idle,
-            pinint3_idle,
             target_timer_idle,
             target_rts_idle,
+            red,
             pinint0_pin,
-            pinint3_pin,
-            target_timer_pin,
             cts,
             rts
         ]
@@ -500,25 +462,17 @@ const APP: () = {
         let target_tx_dma  = cx.resources.target_tx_dma;
         let target_sync_rx = cx.resources.target_sync_rx_idle;
         let target_sync_tx = cx.resources.target_sync_tx;
-        let target_timer_idle   = cx.resources.target_timer_idle;
-        let target_timer_pin             = cx.resources.target_timer_pin;
+        let target_timer_idle       = cx.resources.target_timer_idle;
         let pinint0_idle   = cx.resources.pinint0_idle;
-        let pinint3_idle            = cx.resources.pinint3_idle;
         let pinint0_pin             = cx.resources.pinint0_pin;
-        let pinint3_pin            = cx.resources.pinint3_pin;
         let target_rts_idle= cx.resources.target_rts_idle;
+        let red            = cx.resources.red;
         let cts            = cx.resources.cts;
         let rts            = cx.resources.rts;
-
-        // all pins are dynamic so we currently don't need to modify this map
-        let pins = FnvIndexMap::<usize, (pin::Level, Option<u32>), U4>::new();
+// IDEA: add 8 "empty" idle_green + greens (we don't allow more interrupts rn anyway)
+// and then assign interrupts to pins on SetDirection -> Input?
+        let mut pins = FnvIndexMap::<_, _, U4>::new();
         let mut dynamic_pins = FnvIndexMap::<_, _, U4>::new();
-
-        // ensure that the pins that should always be Out/Input are always in right direction
-        // TODO just make them fixed direction Pins again, this is dangerous and expensive!
-        rts.switch_to_input();
-        cts.switch_to_output(gpio::Level::Low);
-        target_timer_pin.switch_to_input();
 
         let mut buf = [0; 256];
 
@@ -590,8 +544,8 @@ const APP: () = {
                         ) => {
                             // todo nicer and more generic once we resolve the Pin Type Conundrum
                             let pin_is_output: bool = match pin {
+                                DynamicPin::GPIO(29) => red.direction_is_output(),
                                 PININT0_DYN_PIN => pinint0_pin.direction_is_output(),
-                                PININT3_DYN_PIN => pinint3_pin.direction_is_output(),
                                 DynamicPin::GPIO(CTS_PIN_NUMBER) => cts.direction_is_output(),
                                 _ => false
                             };
@@ -602,8 +556,8 @@ const APP: () = {
                                     pin::Level::High => {
                                         rprintln!("dynamic HIGH for {:?}", pin);
                                         match pin {
+                                            DynamicPin::GPIO(29) => red.set_high(),
                                             PININT0_DYN_PIN => pinint0_pin.set_high(),
-                                            PININT3_DYN_PIN=> pinint3_pin.set_high(),
                                             DynamicPin::GPIO(RTS_PIN_NUMBER) => cts.set_high(),
                                             _ => todo!(),
                                         };
@@ -611,8 +565,8 @@ const APP: () = {
                                     pin::Level::Low => {
                                         rprintln!("dynamic LOW for {:?}", pin);
                                         match pin {
+                                            DynamicPin::GPIO(29) => red.set_low(),
                                             PININT0_DYN_PIN => pinint0_pin.set_low(),
-                                            PININT3_DYN_PIN => pinint3_pin.set_low(),
                                             DynamicPin::GPIO(RTS_PIN_NUMBER) => cts.set_low(),
                                             _ => todo!(),
                                         };
@@ -659,8 +613,8 @@ const APP: () = {
                             // fn get_gpio_from_pin_number() -> Option<GpioPin<??, Dynamic>>
                             // (I'll call this the in Type Conundrum for now)
                             match pin {
+                                DynamicPin::GPIO(29) => red.switch_to_input(),
                                 PININT0_DYN_PIN => pinint0_pin.switch_to_input(),
-                                PININT3_DYN_PIN => pinint3_pin.switch_to_input(),
                                 DynamicPin::GPIO(CTS_PIN_NUMBER) => {
                                     // TODO proper error handling
                                     rprintln!("CTS pin is never Input");
@@ -682,17 +636,12 @@ const APP: () = {
                             rprintln!("SET DIRECTION -> OUTPUT for {:?}. Default Level LOW", pin);
                             // todo nicer and more generic once we start enabling ALL the pins
                             match pin {
+                                DynamicPin::GPIO(29) => red.switch_to_output(gpio::Level::Low),
                                 PININT0_DYN_PIN => pinint0_pin.switch_to_output(gpio::Level::Low),
-                                PININT3_DYN_PIN => pinint3_pin.switch_to_output(gpio::Level::Low),
                                 DynamicPin::GPIO(CTS_PIN_NUMBER) => cts.switch_to_output(gpio::Level::Low),
                                 DynamicPin::GPIO(RTS_PIN_NUMBER) => {
                                     // TODO proper error handling
                                     rprintln!("RTS pin is never Output");
-                                    unreachable!()
-                                }
-                                TARGET_TIMER_DYN_PIN => {
-                                    // TODO proper error handling
-                                    rprintln!("Target timer pin is never Output");
                                     unreachable!()
                                 }
                                 _ => todo!(),
@@ -707,9 +656,8 @@ const APP: () = {
 
                             // todo nicer and more generic once we resolve the Pin Type Conundrum
                             let pin_is_input: bool = match pin {
+                                DynamicPin::GPIO(29) => red.direction_is_input(),
                                 PININT0_DYN_PIN => pinint0_pin.direction_is_input(),
-                                PININT3_DYN_PIN => pinint3_pin.direction_is_input(),
-                                TARGET_TIMER_DYN_PIN => target_timer_pin.direction_is_input(),
                                 DynamicPin::GPIO(RTS_PIN_NUMBER) => rts.direction_is_input(),
                                 _ => false
                             };
@@ -755,9 +703,8 @@ const APP: () = {
 
             // TODO only do this for pins that are currently in input direction?
             handle_pin_interrupt_dynamic(pinint0_idle, PININT0_DYN_PIN, &mut dynamic_pins);
-            handle_pin_interrupt_dynamic(pinint3_idle, PININT3_DYN_PIN, &mut dynamic_pins);
             handle_pin_interrupt_dynamic(target_rts_idle, DynamicPin::GPIO(RTS_PIN_NUMBER), &mut dynamic_pins);
-            handle_pin_interrupt_dynamic(target_timer_idle, TARGET_TIMER_DYN_PIN, &mut dynamic_pins);
+            handle_pin_interrupt(target_timer_idle, InputPin::TargetTimer, &mut pins);
 
             // We need this critical section to protect against a race
             // conditions with the interrupt handlers. Otherwise, the following
@@ -808,6 +755,7 @@ const APP: () = {
 
     #[task(binds = PIN_INT0, resources = [pinint0_int])]
     fn pinint0(context: pinint0::Context) {
+
         context.resources.pinint0_int.handle_interrupt();
     }
 
@@ -905,8 +853,8 @@ fn handle_pin_interrupt_dynamic(
     }
 }
 
-// TODO may still be used if fixed input pins are desired so let's keep it?
-#[allow(dead_code)]
+
+// TODO get rid of this when we make all pins dynamic
 fn handle_pin_interrupt(
     int:  &mut pin_interrupt::Idle,
     pin:  InputPin,
