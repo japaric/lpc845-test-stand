@@ -2,7 +2,10 @@ use std::sync::{LockResult, MutexGuard};
 
 use host_lib::test_stand::NotConfiguredError;
 
-use super::{assistant::Assistant, target::Target};
+use super::{
+    assistant::{Assistant, AssistantInterface},
+    target::Target,
+};
 
 /// An instance of the test stand
 ///
@@ -11,7 +14,7 @@ pub struct TestStand {
     _guard: LockResult<MutexGuard<'static, ()>>,
 
     pub target: Target,
-    pub assistant: Assistant,
+    pub assistant: AssistantInterface<Assistant>,
 }
 
 impl TestStand {
@@ -29,7 +32,7 @@ impl TestStand {
         Ok(Self {
             _guard: test_stand.guard,
             target: Target::new(test_stand.target?),
-            assistant: Assistant::new(test_stand.assistant?, assistant_num_pins),
+            assistant: AssistantInterface::new(test_stand.assistant?, assistant_num_pins),
         })
     }
 }

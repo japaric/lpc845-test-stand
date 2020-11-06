@@ -1,6 +1,6 @@
 //! Test suite for the test-assitant "user interface" for pin configuration during tests
 
-use lpc845_messages::{PinNumber, VoltageLevel};
+use lpc845_messages::{PinNumber};
 use lpc845_test_suite::{Result, TestStand};
 
 const TEST_PIN: PinNumber = 29; // this is the red led
@@ -8,11 +8,11 @@ const TEST_PIN: PinNumber = 29; // this is the red led
 #[test]
 fn in_out_changes_should_be_consuming() -> Result {
     // SETUP
-    let mut test_assistant = TestStand::new()?.assistant;
+    let test_assistant = TestStand::new()?.assistant;
 
     // RUN TEST
-    let in_pin = test_assistant.create_gpio_input_pin(TEST_PIN)?;
-    let _out_pin = test_assistant.to_output_pin(in_pin, VoltageLevel::Low)?;
+    let _in_pin = test_assistant.create_gpio_input_pin(TEST_PIN)?;
+    //let _out_pin = test_assistant.to_output_pin(in_pin, VoltageLevel::Low)?;
 
     // Note: calling
     // in_pin.is_low();
@@ -27,7 +27,7 @@ fn in_out_changes_should_be_consuming() -> Result {
 #[test]
 fn in_pin_should_not_be_creatable_twice() -> Result {
     // SETUP
-    let mut test_assistant = TestStand::new()?.assistant;
+    let test_assistant = TestStand::new()?.assistant;
     let in_pin_1 = test_assistant.create_gpio_input_pin(TEST_PIN);
     assert!(in_pin_1.is_ok());
 

@@ -1,3 +1,4 @@
+use std::sync::RwLock;
 use std::time::{Duration, Instant};
 
 use std::collections::HashMap;
@@ -12,10 +13,17 @@ use lpc845_messages::{
 
 // TODO find a place to share them with t-a and t-t?
 /// some commonly used pin numbers
+// TODO: un-pub
 pub const RTS_PIN_NUMBER: PinNumber = 18;
 pub const CTS_PIN_NUMBER: PinNumber = 19;
 
+/// A wrapper around the test-assistant for easy pin configuration.
+pub struct AssistantInterface<Assistant> {
+    real_assistant: RwLock<Assistant>,
+}
+
 /// The connection to the test assistant
+// TODO: doesn't have to be pub after refactoring #3?
 pub struct Assistant {
     conn: Conn,
     /// all of the assitant's GPIO pins, keyed by pin number (Arduino style)
@@ -30,12 +38,64 @@ pub struct InputPin {
     pin: Pin<DynamicPin>,
 }
 
+pub struct InputPin2<'assistant, Assistant> {
+    /// Note that the pin numbers used here correspond to the LPC845 breakout board pinouts counted
+    /// from top left counterclockwise to top right
+    /// (see https://www.nxp.com/assets/images/en/block-diagrams/LPC845-BRK-BD2.png )
+    pin_number: PinNumber,
+    pin: Pin<DynamicPin>,
+    assistant: &'assistant RwLock<Assistant>, // needed to access conn
+}
+
 pub struct OutputPin {
     /// Note that the pin numbers used here correspond to the LPC845 breakout board pinouts counted
     /// from top left counterclockwise to top right
     /// (see https://www.nxp.com/assets/images/en/block-diagrams/LPC845-BRK-BD2.png )
     pin_number: PinNumber,
     pin: Pin<DynamicPin>,
+}
+
+impl AssistantInterface<Assistant> {
+    pub fn new(conn: Conn, num_pins: u8) -> Self {
+        let assistant = Assistant::new(conn, num_pins);
+
+        AssistantInterface {
+            real_assistant: RwLock::new(assistant),
+        }
+    }
+
+    pub fn create_gpio_input_pin(
+        &self,
+        pin_number: u8,
+    ) -> Result<InputPin2<Assistant>, AssistantPinOperationError> {
+        // TODO untangle match statement below
+        // TODO add coherence check to ensure we don't
+        // - assign more dynamic pins than possible
+        // -> and then return Err(AssistantPinOperationError::IllegalPinNumber(PinNumber))
+
+        let lock = self.real_assistant.try_write();
+        // note to self: loop until we get the lock?
+        if let Ok(mut assistant) = lock {
+            // pull pin out so it can't be reassigned
+            match assistant.pins.remove(&pin_number) {
+                Some(mut pin) => {
+                    pin.set_direction::<HostToAssistant>(
+                        pin::Direction::Input,
+                        &mut assistant.conn,
+                    )
+                    .map_err(|err| AssistantPinOperationError::SetPinDirectionInputError(err)).unwrap();
+
+                    return Ok(InputPin2 {
+                        assistant: &self.real_assistant,
+                        pin_number: pin_number,
+                        pin: pin,
+                    });
+                }
+                None => return Err(AssistantPinOperationError::IllegalPinNumber(pin_number)),
+            }
+        }
+        Err(AssistantPinOperationError::AssistantLockedError)
+    }
 }
 
 impl Assistant {
@@ -73,9 +133,7 @@ impl Assistant {
         match self.pins.remove(&pin_number) {
             Some(mut pin) => {
                 pin.set_direction::<HostToAssistant>(pin::Direction::Input, &mut self.conn)
-                    .map_err(|err| {
-                        AssistantPinOperationError::SetPinDirectionInputError(err)
-                    })?;
+                    .map_err(|err| AssistantPinOperationError::SetPinDirectionInputError(err))?;
 
                 Ok(InputPin {
                     pin_number: pin_number,
@@ -87,8 +145,12 @@ impl Assistant {
     }
 
     /// Convert this pin into an Output pin with initial voltage `voltage_level`
-    pub fn to_output_pin(&mut self, mut input_pin: InputPin, _voltage_level: VoltageLevel ) -> Result<OutputPin, AssistantPinOperationError> {
-        self.pin_direction_to_output(&mut input_pin.pin);
+    pub fn to_output_pin(
+        &mut self,
+        mut input_pin: InputPin,
+        _voltage_level: VoltageLevel,
+    ) -> Result<OutputPin, AssistantPinOperationError> {
+        self.pin_direction_to_output(&mut input_pin.pin).unwrap();
         // TODO pass voltage_level on to t-a
 
         Ok(OutputPin {
@@ -99,28 +161,24 @@ impl Assistant {
 
     /// Indicates whether the GPIO pin `input_pin` receives a **Low** signal from the test target
     pub fn is_low(&mut self, input_pin: &mut InputPin) -> Result<bool, AssistantPinReadError> {
-        let pin_state = input_pin.pin.read_level::<HostToAssistant, AssistantToHost>(
-            Duration::from_millis(10),
-            &mut self.conn,
-        )?;
+        let pin_state = input_pin
+            .pin
+            .read_level::<HostToAssistant, AssistantToHost>(
+                Duration::from_millis(10),
+                &mut self.conn,
+            )?;
 
         Ok(pin_state.0 == pin::Level::Low)
     }
 
-
-
     // internal helper
-    fn pin_direction_to_output(&mut self, pin: &mut Pin<DynamicPin>) -> Result<(), AssistantPinOperationError> {
+    fn pin_direction_to_output(
+        &mut self,
+        pin: &mut Pin<DynamicPin>,
+    ) -> Result<(), AssistantPinOperationError> {
         pin.set_direction::<HostToAssistant>(pin::Direction::Output, &mut self.conn)
-           .map_err(|err| AssistantPinOperationError::SetPinDirectionInputError(err))
+            .map_err(|err| AssistantPinOperationError::SetPinDirectionInputError(err))
     }
-
-
-
-
-
-
-
 
     /// Make the test-assistant's pin with number `pin` an Input pin.
     pub fn set_pin_direction_input(
@@ -501,4 +559,5 @@ pub enum AssistantPinOperationError {
     /// Or has already been created earlier
     IllegalPinNumber(PinNumber),
     SetPinDirectionInputError(ConnSendError),
+    AssistantLockedError,
 }
