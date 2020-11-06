@@ -13,7 +13,6 @@ use lpc845_test_suite::assistant::{Assistant, InputPin2};
 const RED_LED_PIN: PinNumber = 29;
 const GRN_LED_PIN: PinNumber = 31;
 
-const RED_LED: DynamicPin = DynamicPin::GPIO(29);
 const GRN_LED: DynamicPin = DynamicPin::GPIO(31);
 
 /*
@@ -52,28 +51,11 @@ fn target_should_read_input_level() -> Result {
     Ok(())
 }
 
-
 #[test]
-fn assistant_red_led_should_light_up_on_low() -> Result {
+#[allow(unused_assignments)] // to silence the last conversion
+fn assistant_red_led_should_be_toggleable_by_pin_direction() -> Result {
     // SETUP
-    let mut test_stand = TestStand::new()?;
-    let mut out_pin = test_stand.assistant.create_gpio_output_pin(RED_LED_PIN)?;
-    out_pin.set_high()?;
-
-    // RUN TEST
-    sleep(time::Duration::from_secs(2));
-    out_pin.set_low()?;
-
-    // 👀  manually assert that on-board led is red after 2 secs
-
-    Ok(())
-}
-
-
-#[test]
-fn dynamic_red_led_should_be_toggleable_by_pin_direction() -> Result {
-    // SETUP
-    let mut test_stand = TestStand::new()?;
+    let test_stand = TestStand::new()?;
     // ensure pin is low (-> red led is on) when we start
     let mut out_pin = test_stand.assistant.create_gpio_output_pin(RED_LED_PIN)?;
     let mut in_pin: InputPin2<Assistant>; // we'll need this during the loop
@@ -86,10 +68,12 @@ fn dynamic_red_led_should_be_toggleable_by_pin_direction() -> Result {
     sleep(time::Duration::from_secs(2));
     out_pin = in_pin.to_output_pin(VoltageLevel::Low)?;
     sleep(time::Duration::from_secs(2));
+
     in_pin = out_pin.to_input_pin()?;
     sleep(time::Duration::from_secs(2));
     out_pin = in_pin.to_output_pin(VoltageLevel::Low)?;
     sleep(time::Duration::from_secs(2));
+
     in_pin = out_pin.to_input_pin()?;
     sleep(time::Duration::from_secs(2));
     out_pin = in_pin.to_output_pin(VoltageLevel::Low)?;
@@ -101,33 +85,36 @@ fn dynamic_red_led_should_be_toggleable_by_pin_direction() -> Result {
     Ok(())
 }
 
-/*
 #[test]
-fn dynamic_red_led_should_be_toggleable_by_level() -> Result {
+fn assistant_red_led_should_be_toggleable_by_level() -> Result {
     // SETUP
-    let mut test_stand = TestStand::new()?;
-    test_stand.assistant.set_pin_direction_output(RED_LED)?;
+    let test_stand = TestStand::new()?;
+    let mut out_pin = test_stand.assistant.create_gpio_output_pin(RED_LED_PIN)?;
+    out_pin.set_high()?;
 
     // RUN TEST
-    for n in 0..5 {
-        sleep(time::Duration::from_secs(2));
+    sleep(time::Duration::from_secs(2));
+    out_pin.set_low()?;
+    sleep(time::Duration::from_secs(2));
+    out_pin.set_high()?;
 
-        // toggle back and forth between high/low
-        if n % 2 == 0 {
-            test_stand.assistant.set_output_pin_low(RED_LED)?;
-            assert!(test_stand.target.pin_is_low()?);
-        } else {
-            test_stand.assistant.set_output_pin_high(RED_LED)?;
-            assert!(test_stand.target.pin_is_high()?);
-        }
-    }
+    sleep(time::Duration::from_secs(2));
+    out_pin.set_low()?;
+    sleep(time::Duration::from_secs(2));
+    out_pin.set_high()?;
+
+    sleep(time::Duration::from_secs(2));
+    out_pin.set_low()?;
+    sleep(time::Duration::from_secs(2));
+    out_pin.set_high()?;
 
     // ASSERT POSTCONDITION
-    // 👀  manually assert that led is toggling on/off 5 times every 2 secs
+    // 👀  manually assert that led is toggling on/off every 2 secs
 
     Ok(())
 }
 
+/*
 // TODO add tests checking that:
 // - what happens if I call dyn read/write funtions on uninitialized pin?
 // - I didn't break measure_gpio_period works , receive_from_target_usart_sync
