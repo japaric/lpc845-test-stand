@@ -191,6 +191,34 @@ impl<'assistant> OutputPin2<'assistant, Assistant> {
             Err(_) => Err(AssistantPinOperationError::AssistantLockedError)
         }
     }
+
+    /// Set this pin's level to Low.
+    pub fn set_low(&mut self) -> Result<(), AssistantPinOperationError> {
+         // TODO handle lock getting failures better
+        let lock = self.assistant.try_write();
+        match lock {
+            Ok(mut assistant) => {
+                self.pin
+                    .set_level::<HostToAssistant>(pin::Level::Low, &mut assistant.conn)
+                    .map_err(|err| AssistantPinOperationError::SetPinLowError(err))
+            }
+            Err(_) => Err(AssistantPinOperationError::AssistantLockedError)
+        }
+    }
+
+    /// Set this pin's level to High.
+    pub fn set_high(&mut self) -> Result<(), AssistantPinOperationError> {
+        // TODO handle lock getting failures better
+        let lock = self.assistant.try_write();
+        match lock {
+            Ok(mut assistant) => {
+                self.pin
+                    .set_level::<HostToAssistant>(pin::Level::High, &mut assistant.conn)
+                    .map_err(|err| AssistantPinOperationError::SetPinLowError(err))
+            }
+            Err(_) => Err(AssistantPinOperationError::AssistantLockedError)
+        }
+    }
 }
 
 impl Assistant {
@@ -670,5 +698,6 @@ pub enum AssistantPinOperationError {
     /// Or has already been created earlier
     IllegalPinNumber(PinNumber),
     SetPinDirectionInputError(ConnSendError),
+    SetPinLowError(ConnSendError),
     AssistantLockedError,
 }
