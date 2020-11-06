@@ -13,9 +13,8 @@ use lpc845_messages::{
 
 // TODO find a place to share them with t-a and t-t?
 /// some commonly used pin numbers
-// TODO: un-pub
-pub const RTS_PIN_NUMBER: PinNumber = 18;
-pub const CTS_PIN_NUMBER: PinNumber = 19;
+const RTS_PIN_NUMBER: PinNumber = 18;
+const CTS_PIN_NUMBER: PinNumber = 19;
 
 /// A wrapper around the test-assistant for easy pin configuration.
 pub struct AssistantInterface<Assistant> {
