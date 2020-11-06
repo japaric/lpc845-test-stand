@@ -6,8 +6,9 @@
 use std::thread::sleep;
 use std::time;
 
-use lpc845_messages::{DynamicPin, PinNumber};
+use lpc845_messages::{DynamicPin, PinNumber, VoltageLevel};
 use lpc845_test_suite::{Result, TestStand};
+use lpc845_test_suite::assistant::{Assistant, InputPin2};
 
 const RED_LED_PIN: PinNumber = 29;
 const GRN_LED_PIN: PinNumber = 31;
@@ -36,14 +37,13 @@ fn it_should_set_pin_level() -> Result {
 */
 
 #[test]
-fn it_should_read_input_level() -> Result {
+fn target_should_read_input_level() -> Result {
     // SETUP
     let mut test_stand =  TestStand::new()?;
-
     let mut out_pin = test_stand.assistant.create_gpio_output_pin(RED_LED_PIN)?;
 
     // RUN TEST
-    out_pin.set_low();
+    out_pin.set_low()?;
     assert!(test_stand.target.pin_is_low()?);
 
     out_pin.set_high()?;
@@ -52,49 +52,56 @@ fn it_should_read_input_level() -> Result {
     Ok(())
 }
 
-/*
+
 #[test]
-fn dynamic_red_led_should_light_up_on_low() -> Result {
+fn assistant_red_led_should_light_up_on_low() -> Result {
     // SETUP
     let mut test_stand = TestStand::new()?;
-    test_stand.assistant.set_pin_direction_output(RED_LED)?;
-    test_stand.assistant.set_output_pin_high(RED_LED)?;
+    let mut out_pin = test_stand.assistant.create_gpio_output_pin(RED_LED_PIN)?;
+    out_pin.set_high()?;
 
     // RUN TEST
     sleep(time::Duration::from_secs(2));
-    test_stand.assistant.set_output_pin_low(RED_LED)?;
+    out_pin.set_low()?;
 
     // 👀  manually assert that on-board led is red after 2 secs
 
     Ok(())
 }
 
+
 #[test]
 fn dynamic_red_led_should_be_toggleable_by_pin_direction() -> Result {
     // SETUP
     let mut test_stand = TestStand::new()?;
     // ensure pin is low (-> red led is on) when we start
-    test_stand.assistant.set_pin_direction_output(RED_LED)?;
-    test_stand.assistant.set_output_pin_low(RED_LED)?;
+    let mut out_pin = test_stand.assistant.create_gpio_output_pin(RED_LED_PIN)?;
+    let mut in_pin: InputPin2<Assistant>; // we'll need this during the loop
+    out_pin.set_low()?;
 
     // RUN TEST
-    for n in 0..5 {
-        sleep(time::Duration::from_secs(2));
+    // TODO: figure out how to do this in a loop without move trouble
 
-        // toggle back and forth between in/output
-        if n % 2 == 0 {
-            test_stand.assistant.set_pin_direction_input(RED_LED)?;
-        } else {
-            test_stand.assistant.set_pin_direction_output(RED_LED)?;
-        }
-    }
+    in_pin = out_pin.to_input_pin()?;
+    sleep(time::Duration::from_secs(2));
+    out_pin = in_pin.to_output_pin(VoltageLevel::Low)?;
+    sleep(time::Duration::from_secs(2));
+    in_pin = out_pin.to_input_pin()?;
+    sleep(time::Duration::from_secs(2));
+    out_pin = in_pin.to_output_pin(VoltageLevel::Low)?;
+    sleep(time::Duration::from_secs(2));
+    in_pin = out_pin.to_input_pin()?;
+    sleep(time::Duration::from_secs(2));
+    out_pin = in_pin.to_output_pin(VoltageLevel::Low)?;
+    sleep(time::Duration::from_secs(2));
 
     // ASSERT POSTCONDITION
-    // 👀  manually assert that led is toggling on/off 5 times every 2 secs
+    // 👀  manually assert that led is toggling on/off every 2 secs
 
     Ok(())
 }
 
+/*
 #[test]
 fn dynamic_red_led_should_be_toggleable_by_level() -> Result {
     // SETUP
