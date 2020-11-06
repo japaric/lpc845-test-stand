@@ -110,11 +110,11 @@ impl AssistantInterface<Assistant> {
 impl<'assistant> InputPin2<'assistant, Assistant> {
 
     /// Convert this pin into an Output pin with initial voltage `voltage_level`
-    pub fn to_output_pin(
+    pub fn to_output_pin<'a>(
         &mut self,
-        mut input_pin: InputPin2<Assistant>,
+        mut input_pin: InputPin2<'a, Assistant>,
         _voltage_level: VoltageLevel,
-    ) -> Result<OutputPin2<Assistant>, AssistantPinOperationError> {
+    ) -> Result<OutputPin2<'a, Assistant>, AssistantPinOperationError> {
 
         // note to self: loop until we get the lock?
         let lock = self.assistant.try_write();
