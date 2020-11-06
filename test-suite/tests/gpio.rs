@@ -6,34 +6,31 @@
 use std::thread::sleep;
 use std::time;
 
-use lpc845_messages::{DynamicPin, PinNumber, VoltageLevel};
+use lpc845_messages::{PinNumber, VoltageLevel};
 use lpc845_test_suite::{Result, TestStand};
 use lpc845_test_suite::assistant::{Assistant, InputPin2};
 
 const RED_LED_PIN: PinNumber = 29;
 const GRN_LED_PIN: PinNumber = 31;
 
-const GRN_LED: DynamicPin = DynamicPin::GPIO(31);
-
-/*
 #[test]
-fn it_should_set_pin_level() -> Result {
+fn target_should_set_pin_level() -> Result {
     // SETUP
     let mut test_stand = TestStand::new()?;
-
     let mut in_pin = test_stand.assistant.create_gpio_input_pin(GRN_LED_PIN)?;
 
     // TEST & ASSERT POSTCONDITION
     test_stand.target.set_pin_low()?;
-    assert!(test_stand.assistant.is_low(&mut in_pin)?);
+    assert!(in_pin.is_low()?);
 
     // TEST & ASSERT POSTCONDITION
-    //test_stand.target.set_pin_high()?;
-    //assert!(test_stand.assistant.input_pin_is_high(GRN_LED)?);
+    // TODO I think I may have damaged my green pin by bedning during rewiring
+    // -> test this with other hw OR reconfig other assistant pin as input and rewire and test
+    // test_stand.target.set_pin_high()?;
+    // assert!(in_pin.is_high()?);
 
     Ok(())
 }
-*/
 
 #[test]
 fn target_should_read_input_level() -> Result {
@@ -113,41 +110,3 @@ fn assistant_red_led_should_be_toggleable_by_level() -> Result {
 
     Ok(())
 }
-
-/*
-// TODO add tests checking that:
-// - what happens if I call dyn read/write funtions on uninitialized pin?
-// - I didn't break measure_gpio_period works , receive_from_target_usart_sync
-#[test]
-fn dynamic_interrupt_handlers_should_be_ignored_after_direction_switch() -> Result {
-    // SETUP
-    let mut test_stand = TestStand::new()?;
-    test_stand.assistant.set_pin_direction_input(GRN_LED)?;
-    test_stand.target.set_pin_low()?;
-    test_stand.assistant.set_pin_direction_output(GRN_LED)?;
-
-    // RUN TEST
-    let read_result = test_stand.assistant.input_pin_is_low(GRN_LED);
-
-    // ASSERT POSTCONDITION
-    assert!(read_result.is_err());
-
-    Ok(())
-}
-
-#[test]
-fn dynamic_input_calls_on_output_direction_should_yield_useful_error() -> Result {
-    // SETUP
-    let mut test_stand = TestStand::new()?;
-    test_stand.assistant.set_pin_direction_output(GRN_LED)?;
-
-    // RUN TEST
-    let read_result = test_stand.assistant.input_pin_is_low(GRN_LED);
-
-    // ASSERT POSTCONDITION
-    // TODO. make error more useful here
-    assert!(read_result.is_err());
-
-    Ok(())
-}
-*/

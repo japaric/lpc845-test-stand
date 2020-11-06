@@ -30,22 +30,6 @@ pub struct Assistant {
     pins: HashMap<PinNumber, Pin<DynamicPin>>,
 }
 
-pub struct InputPin {
-    /// Note that the pin numbers used here correspond to the LPC845 breakout board pinouts counted
-    /// from top left counterclockwise to top right
-    /// (see https://www.nxp.com/assets/images/en/block-diagrams/LPC845-BRK-BD2.png )
-    pin_number: PinNumber,
-    pin: Pin<DynamicPin>,
-}
-
-pub struct OutputPin {
-    /// Note that the pin numbers used here correspond to the LPC845 breakout board pinouts counted
-    /// from top left counterclockwise to top right
-    /// (see https://www.nxp.com/assets/images/en/block-diagrams/LPC845-BRK-BD2.png )
-    pin_number: PinNumber,
-    pin: Pin<DynamicPin>,
-}
-
 pub struct InputPin2<'assistant, Assistant> {
     /// Note that the pin numbers used here correspond to the LPC845 breakout board pinouts counted
     /// from top left counterclockwise to top right
@@ -79,6 +63,7 @@ impl AssistantInterface<Assistant> {
     ) -> Result<InputPin2<Assistant>, AssistantPinOperationError> {
         // TODO untangle match statement below
         // TODO add coherence check to ensure we don't
+        // - assign pins that can't be dynamic
         // - assign more dynamic pins than possible
         // -> and then return Err(AssistantPinOperationError::IllegalPinNumber(PinNumber))
 
@@ -113,6 +98,7 @@ impl AssistantInterface<Assistant> {
         // TODO untangle match statement below
         // TODO add coherence check to ensure we don't
         // - assign more dynamic pins than possible
+        // - assign pins that can't be dynamic
         // -> and then return Err(AssistantPinOperationError::IllegalPinNumber(PinNumber))
 
         let lock = self.real_assistant.try_write();
@@ -164,6 +150,32 @@ impl<'assistant> InputPin2<'assistant, Assistant> {
                 })
             }
             Err(_) => Err(AssistantPinOperationError::AssistantLockedError)
+        }
+    }
+
+    /// Indicates whether this pin receives a **Low** signal from the test target
+    pub fn is_low(&mut self) -> Result< bool, AssistantPinOperationError> {
+        // TODO handle lock getting failures better
+        let lock = self.assistant.try_write();
+        match lock {
+            Ok(mut assistant) => {
+                let pin_state = self.pin
+                    .read_level::<HostToAssistant, AssistantToHost>(
+                        Duration::from_millis(10),
+                        &mut assistant.conn)
+                    .map_err(|err| AssistantPinOperationError::ReadPinError(err))?;
+
+                    Ok(pin_state.0 == pin::Level::Low)
+            }
+            Err(_) => Err(AssistantPinOperationError::AssistantLockedError)
+        }
+    }
+
+    /// Indicates whether this pin receives a **High** signal from the test target
+    pub fn is_high(&mut self) -> Result<bool, AssistantPinOperationError> {
+        match self.is_low() {
+            Ok(is_low) => { Ok(!is_low) }
+            Err(err) => {Err(err)}
         }
     }
 }
@@ -243,57 +255,6 @@ impl Assistant {
         return s;
     }
 
-    /// Set direction of pin at `pin_number` to Input.
-    /// Usage note: Use the returned `InputPin` struct for any operations on this pin
-    pub fn create_gpio_input_pin(
-        &mut self,
-        pin_number: PinNumber,
-    ) -> Result<InputPin, AssistantPinOperationError> {
-        // TODO add coherence check to ensure we don't
-        // - assign more dynamic pins than possible
-        // -> and then return Err(AssistantPinOperationError::IllegalPinNumber(PinNumber))
-
-        match self.pins.remove(&pin_number) {
-            Some(mut pin) => {
-                pin.set_direction::<HostToAssistant>(pin::Direction::Input, &mut self.conn)
-                    .map_err(|err| AssistantPinOperationError::SetPinDirectionInputError(err))?;
-
-                Ok(InputPin {
-                    pin_number: pin_number,
-                    pin: pin,
-                })
-            }
-            None => Err(AssistantPinOperationError::IllegalPinNumber(pin_number)),
-        }
-    }
-
-    /// Convert this pin into an Output pin with initial voltage `voltage_level`
-    pub fn to_output_pin(
-        &mut self,
-        mut input_pin: InputPin,
-        _voltage_level: VoltageLevel,
-    ) -> Result<OutputPin, AssistantPinOperationError> {
-        self.pin_direction_to_output(&mut input_pin.pin).unwrap();
-        // TODO pass voltage_level on to t-a
-
-        Ok(OutputPin {
-            pin_number: input_pin.pin_number,
-            pin: input_pin.pin,
-        })
-    }
-
-    /// Indicates whether the GPIO pin `input_pin` receives a **Low** signal from the test target
-    pub fn is_low(&mut self, input_pin: &mut InputPin) -> Result<bool, AssistantPinReadError> {
-        let pin_state = input_pin
-            .pin
-            .read_level::<HostToAssistant, AssistantToHost>(
-                Duration::from_millis(10),
-                &mut self.conn,
-            )?;
-
-        Ok(pin_state.0 == pin::Level::Low)
-    }
-
     // internal helper
     fn pin_direction_to_output(
         &mut self,
@@ -312,15 +273,9 @@ impl Assistant {
             .map_err(|err| AssistantPinOperationError::SetPinDirectionInputError(err))
     }
 
-
-
-
-
-
-
-
     /// Make the test-assistant's pin with number `pin` an Input pin.
-    pub fn set_pin_direction_input(
+    /// Note: this is a legacy function and should probably be refactored out (TODO)
+    fn set_pin_direction_input(
         &mut self,
         pin: DynamicPin,
     ) -> Result<(), AssistantSetPinDirectionInputError> {
@@ -347,22 +302,6 @@ impl Assistant {
                 .unwrap()
                 .set_direction::<HostToAssistant>(pin::Direction::Output, &mut self.conn)
                 .map_err(|err| AssistantSetPinDirectionOutputError(err)),
-            _ => todo!(),
-        }
-    }
-
-    /// Set the test-assistant's `pin` level to High.
-    /// Note that the direction of `pin` must be set to Output first!
-    /// Use `set_pin_direction_output()` for this.
-    pub fn set_output_pin_high(&mut self, pin: DynamicPin) -> Result<(), AssistantSetPinHighError> {
-        // TODO assert that pin is in output direction (note: we don't store pin state for this here)
-        match pin {
-            DynamicPin::GPIO(pin_number) => self
-                .pins
-                .get_mut(&pin_number)
-                .unwrap()
-                .set_level::<HostToAssistant>(pin::Level::High, &mut self.conn)
-                .map_err(|err| AssistantSetPinHighError(err)),
             _ => todo!(),
         }
     }
@@ -398,53 +337,6 @@ impl Assistant {
             .unwrap()
             .set_level::<HostToAssistant>(pin::Level::Low, &mut self.conn)
             .map_err(|err| AssistantSetPinLowError(err))
-    }
-
-    /// Indicates whether the GPIO pin `pin` receives a **High** signal from the test target
-    /// Note that the direction of `pin` must be set to Input first!
-    /// Use `set_pin_direction_input()` for this.
-    ///
-    /// Uses `pin_state` internally.
-    pub fn input_pin_is_high(&mut self, pin: DynamicPin) -> Result<bool, AssistantPinReadError> {
-        let pin_state: (pin::Level, Option<u32>);
-
-        match pin {
-            DynamicPin::GPIO(pin_number) => {
-                pin_state = self
-                    .pins
-                    .get_mut(&pin_number)
-                    .unwrap()
-                    .read_level::<HostToAssistant, AssistantToHost>(
-                        Duration::from_millis(10),
-                        &mut self.conn,
-                    )?;
-            }
-            _ => todo!(),
-        }
-        Ok(pin_state.0 == pin::Level::High)
-    }
-
-    /// Indicates whether the GPIO pin `pin` receives a **Low** signal from the test target
-    /// Note that the direction of `pin` must be set to Input first!
-    /// Use `set_pin_direction_input()` for this.
-    ///
-    /// Uses `pin_state` internally.
-    pub fn input_pin_is_low(&mut self, pin: DynamicPin) -> Result<bool, AssistantPinReadError> {
-        let pin_state: (pin::Level, Option<u32>);
-        match pin {
-            DynamicPin::GPIO(pin_number) => {
-                pin_state = self
-                    .pins
-                    .get_mut(&pin_number)
-                    .unwrap()
-                    .read_level::<HostToAssistant, AssistantToHost>(
-                        Duration::from_millis(10),
-                        &mut self.conn,
-                    )?;
-            }
-            _ => todo!(),
-        }
-        Ok(pin_state.0 == pin::Level::Low)
     }
 
     /// Wait for RTS signal to be enabled
@@ -699,5 +591,6 @@ pub enum AssistantPinOperationError {
     IllegalPinNumber(PinNumber),
     SetPinDirectionInputError(ConnSendError),
     SetPinLowError(ConnSendError),
+    ReadPinError(ReadLevelError),
     AssistantLockedError,
 }
