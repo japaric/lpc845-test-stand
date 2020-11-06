@@ -105,29 +105,87 @@ impl AssistantInterface<Assistant> {
         }
         Err(AssistantPinOperationError::AssistantLockedError)
     }
+
+    pub fn create_gpio_output_pin(
+        &self,
+        pin_number: u8,
+    ) -> Result<OutputPin2<Assistant>, AssistantPinOperationError> {
+        // TODO untangle match statement below
+        // TODO add coherence check to ensure we don't
+        // - assign more dynamic pins than possible
+        // -> and then return Err(AssistantPinOperationError::IllegalPinNumber(PinNumber))
+
+        let lock = self.real_assistant.try_write();
+        // note to self: loop until we get the lock?
+        if let Ok(mut assistant) = lock { // TODO make this a match instead?
+            // pull pin out so it can't be reassigned
+            match assistant.pins.remove(&pin_number) {
+                Some(mut pin) => {
+                    pin.set_direction::<HostToAssistant>(
+                        pin::Direction::Output,
+                        &mut assistant.conn,
+                    )
+                    .map_err(|err| AssistantPinOperationError::SetPinDirectionInputError(err)).unwrap();
+
+                    return Ok(OutputPin2 {
+                        assistant: &self.real_assistant,
+                        pin_number: pin_number,
+                        pin: pin,
+                    });
+                }
+                None => return Err(AssistantPinOperationError::IllegalPinNumber(pin_number)),
+            }
+        }
+        Err(AssistantPinOperationError::AssistantLockedError)
+    }
 }
 
 impl<'assistant> InputPin2<'assistant, Assistant> {
 
     /// Convert this pin into an Output pin with initial voltage `voltage_level`
-    pub fn to_output_pin<'a>(
-        &mut self,
-        mut input_pin: InputPin2<'a, Assistant>,
+    /// NOTE: `voltage_level` is not passed to test-assistant yet; pin is always `Low`
+    pub fn to_output_pin(
+        mut self,
         _voltage_level: VoltageLevel,
-    ) -> Result<OutputPin2<'a, Assistant>, AssistantPinOperationError> {
+    ) -> Result<OutputPin2<'assistant, Assistant>, AssistantPinOperationError> {
 
         // note to self: loop until we get the lock?
         let lock = self.assistant.try_write();
 
         match lock {
             Ok(mut assistant) => {
-                assistant.pin_direction_to_output(&mut input_pin.pin).unwrap();
+                assistant.pin_direction_to_output(&mut self.pin).unwrap();
                 // TODO pass voltage_level on to t-a
 
                 Ok(OutputPin2 {
-                    pin_number: input_pin.pin_number,
-                    pin: input_pin.pin,
-                    assistant: input_pin.assistant,
+                    pin_number: self.pin_number,
+                    pin: self.pin,
+                    assistant: self.assistant,
+                })
+            }
+            Err(_) => Err(AssistantPinOperationError::AssistantLockedError)
+        }
+    }
+}
+
+impl<'assistant> OutputPin2<'assistant, Assistant> {
+
+    /// Convert this pin into an Input pin
+    pub fn to_input_pin(
+        mut self,
+    ) -> Result<InputPin2<'assistant, Assistant>, AssistantPinOperationError> {
+
+        // note to self: loop until we get the lock?
+        let lock = self.assistant.try_write();
+
+        match lock {
+            Ok(mut assistant) => {
+                assistant.pin_direction_to_input(&mut self.pin).unwrap();
+
+                Ok(InputPin2 {
+                    pin_number: self.pin_number,
+                    pin: self.pin,
+                    assistant: self.assistant,
                 })
             }
             Err(_) => Err(AssistantPinOperationError::AssistantLockedError)
@@ -216,6 +274,22 @@ impl Assistant {
         pin.set_direction::<HostToAssistant>(pin::Direction::Output, &mut self.conn)
             .map_err(|err| AssistantPinOperationError::SetPinDirectionInputError(err))
     }
+
+    // internal helper
+    fn pin_direction_to_input(
+        &mut self,
+        pin: &mut Pin<DynamicPin>,
+    ) -> Result<(), AssistantPinOperationError> {
+        pin.set_direction::<HostToAssistant>(pin::Direction::Input, &mut self.conn)
+            .map_err(|err| AssistantPinOperationError::SetPinDirectionInputError(err))
+    }
+
+
+
+
+
+
+
 
     /// Make the test-assistant's pin with number `pin` an Input pin.
     pub fn set_pin_direction_input(
