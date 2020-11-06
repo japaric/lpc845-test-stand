@@ -6,18 +6,58 @@ use host_lib::{
     conn::{Conn, ConnReceiveError, ConnSendError},
     pin::{Pin, ReadLevelError},
 };
-use lpc845_messages::{pin, AssistantToHost, DynamicPin, HostToAssistant, UsartMode};
+use lpc845_messages::{
+    pin, AssistantToHost, DynamicPin, HostToAssistant, PinNumber, UsartMode, VoltageLevel,
+};
 
 // TODO find a place to share them with t-a and t-t?
 /// some commonly used pin numbers
-pub const RTS_PIN_NUMBER: u8 = 18;
-pub const CTS_PIN_NUMBER: u8 = 19;
+pub const RTS_PIN_NUMBER: PinNumber = 18;
+pub const CTS_PIN_NUMBER: PinNumber = 19;
 
 /// The connection to the test assistant
 pub struct Assistant {
     conn: Conn,
     /// all of the assitant's GPIO pins, keyed by pin number (Arduino style)
-    pins: HashMap<u8, Pin<DynamicPin>>,
+    pins: HashMap<PinNumber, Pin<DynamicPin>>,
+}
+
+pub struct InputPin {
+    /// Note that the pin numbers used here correspond to the LPC845 breakout board pinouts counted
+    /// from top left counterclockwise to top right
+    /// (see https://www.nxp.com/assets/images/en/block-diagrams/LPC845-BRK-BD2.png )
+    pin_number: PinNumber,
+    pin: Pin<DynamicPin>,
+}
+
+pub struct OutputPin {
+    /// Note that the pin numbers used here correspond to the LPC845 breakout board pinouts counted
+    /// from top left counterclockwise to top right
+    /// (see https://www.nxp.com/assets/images/en/block-diagrams/LPC845-BRK-BD2.png )
+    pin_number: PinNumber,
+    pin: Pin<DynamicPin>,
+}
+
+// TODO remember what james said about not having to reimplement everything three times
+impl InputPin {
+    pub fn is_low(&self) {
+        todo!()
+    }
+
+    /// Convert this pin into an Output pin with initial voltage `voltage_level`
+    pub fn to_output_pin(
+        self,
+        _voltage_level: VoltageLevel,
+    ) -> Result<OutputPin, AssistantPinOperationError> {
+        // TODO actually set pin direction :D
+
+        // TODO pass voltage_level on to t-a
+
+        Ok(OutputPin {
+            pin_number: self.pin_number,
+            pin: self.pin,
+        })
+    }
 }
 
 impl Assistant {
@@ -42,7 +82,32 @@ impl Assistant {
         return s;
     }
 
-    /// Make the test-assistant's `pin` an Input pin.
+    /// TODO add docs
+    pub fn create_gpio_input_pin(
+        &mut self,
+        pin_number: PinNumber,
+    ) -> Result<InputPin, AssistantPinOperationError> {
+        // TODO add coherence check to ensure we don't
+        // - assign more dynamic pins than possible
+        // -> and then return Err(AssistantPinOperationError::IllegalPinNumber(PinNumber))
+
+        match self.pins.remove(&pin_number) {
+            Some(mut pin) => {
+                pin.set_direction::<HostToAssistant>(pin::Direction::Input, &mut self.conn)
+                    .map_err(|err| {
+                        AssistantPinOperationError::SetPinDirectionInputError(pin_number, err)
+                    })?;
+
+                Ok(InputPin {
+                    pin_number: pin_number,
+                    pin: pin,
+                })
+            }
+            None => Err(AssistantPinOperationError::IllegalPinNumber(pin_number)),
+        }
+    }
+
+    /// Make the test-assistant's pin with number `pin` an Input pin.
     pub fn set_pin_direction_input(
         &mut self,
         pin: DynamicPin,
@@ -413,4 +478,12 @@ pub enum AssistantUsartWaitError {
 pub enum AssistantExpectNothingError {
     Receive(ConnReceiveError),
     UnexpectedMessage(String),
+}
+
+#[derive(Debug)]
+pub enum AssistantPinOperationError {
+    /// This pin cannot be configured, for example because it is reserved for internal use
+    /// Or has already been created earlier
+    IllegalPinNumber(PinNumber),
+    SetPinDirectionInputError(PinNumber, ConnSendError),
 }

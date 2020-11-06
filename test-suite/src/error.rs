@@ -3,9 +3,10 @@ use host_lib::test_stand::NotConfiguredError;
 
 use super::{
     assistant::{
-        AssistantExpectNothingError, AssistantPinReadError, AssistantSetPinDirectionInputError,
-        AssistantSetPinDirectionOutputError, AssistantSetPinHighError, AssistantSetPinLowError,
-        AssistantUsartSendError, AssistantUsartWaitError,
+        AssistantExpectNothingError, AssistantPinOperationError, AssistantPinReadError,
+        AssistantSetPinDirectionInputError, AssistantSetPinDirectionOutputError,
+        AssistantSetPinHighError, AssistantSetPinLowError, AssistantUsartSendError,
+        AssistantUsartWaitError,
     },
     target::{
         TargetI2cError, TargetPinReadError, TargetSetPinHighError, TargetSetPinLowError,
@@ -23,6 +24,7 @@ pub type Result<T = ()> = std::result::Result<T, Error>;
 pub enum Error {
     AssistantExpectNothing(AssistantExpectNothingError),
     AssistantPinRead(AssistantPinReadError),
+    AssistantPinOperation(AssistantPinOperationError),
     AssistantSetPinHigh(AssistantSetPinHighError),
     AssistantSetPinLow(AssistantSetPinLowError),
     AssistantSetPinDirectionInput(AssistantSetPinDirectionInputError),
@@ -51,6 +53,12 @@ impl From<AssistantExpectNothingError> for Error {
 impl From<AssistantPinReadError> for Error {
     fn from(err: AssistantPinReadError) -> Self {
         Self::AssistantPinRead(err)
+    }
+}
+
+impl From<AssistantPinOperationError> for Error {
+    fn from(err: AssistantPinOperationError) -> Self {
+        Self::AssistantPinOperation(err)
     }
 }
 
