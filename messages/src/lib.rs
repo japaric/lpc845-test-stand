@@ -229,6 +229,17 @@ pub enum UsartMode {
 }
 
 
+pub type PinNumber = u8;
+
+/// The voltage level of a pin
+#[derive(Debug)]
+pub enum VoltageLevel {
+    /// High voltage
+    High,
+    /// Low voltage
+    Low,
+}
+
 /// Represents one of the pins that the assistant is monitoring
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub enum InputPin {
@@ -251,8 +262,7 @@ pub enum OutputPin {
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub enum DynamicPin {
     // TODO:
-    // - get rid of other pin enums (2nd step)
     // - maybe prevent illegal pin numbers (e.g. GND/20 should not be used for GPIO)
-    GPIO(u8),
+    GPIO(PinNumber),
     UART, // TODO this is just a dummy, adjust to add info needed for uart
 }

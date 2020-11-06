@@ -38,28 +38,6 @@ pub struct OutputPin {
     pin: Pin<DynamicPin>,
 }
 
-// TODO remember what james said about not having to reimplement everything three times
-impl InputPin {
-    pub fn is_low(&self) {
-        todo!()
-    }
-
-    /// Convert this pin into an Output pin with initial voltage `voltage_level`
-    pub fn to_output_pin(
-        self,
-        _voltage_level: VoltageLevel,
-    ) -> Result<OutputPin, AssistantPinOperationError> {
-        // TODO actually set pin direction :D
-
-        // TODO pass voltage_level on to t-a
-
-        Ok(OutputPin {
-            pin_number: self.pin_number,
-            pin: self.pin,
-        })
-    }
-}
-
 impl Assistant {
     pub(crate) fn new(conn: Conn, num_pins: u8) -> Self {
         let mut s = Self {
@@ -82,7 +60,8 @@ impl Assistant {
         return s;
     }
 
-    /// TODO add docs
+    /// Set direction of pin at `pin_number` to Input.
+    /// Usage note: Use the returned `InputPin` struct for any operations on this pin
     pub fn create_gpio_input_pin(
         &mut self,
         pin_number: PinNumber,
@@ -95,7 +74,7 @@ impl Assistant {
             Some(mut pin) => {
                 pin.set_direction::<HostToAssistant>(pin::Direction::Input, &mut self.conn)
                     .map_err(|err| {
-                        AssistantPinOperationError::SetPinDirectionInputError(pin_number, err)
+                        AssistantPinOperationError::SetPinDirectionInputError(err)
                     })?;
 
                 Ok(InputPin {
@@ -106,6 +85,42 @@ impl Assistant {
             None => Err(AssistantPinOperationError::IllegalPinNumber(pin_number)),
         }
     }
+
+    /// Convert this pin into an Output pin with initial voltage `voltage_level`
+    pub fn to_output_pin(&mut self, mut input_pin: InputPin, _voltage_level: VoltageLevel ) -> Result<OutputPin, AssistantPinOperationError> {
+        self.pin_direction_to_output(&mut input_pin.pin);
+        // TODO pass voltage_level on to t-a
+
+        Ok(OutputPin {
+            pin_number: input_pin.pin_number,
+            pin: input_pin.pin,
+        })
+    }
+
+    /// Indicates whether the GPIO pin `input_pin` receives a **Low** signal from the test target
+    pub fn is_low(&mut self, input_pin: &mut InputPin) -> Result<bool, AssistantPinReadError> {
+        let pin_state = input_pin.pin.read_level::<HostToAssistant, AssistantToHost>(
+            Duration::from_millis(10),
+            &mut self.conn,
+        )?;
+
+        Ok(pin_state.0 == pin::Level::Low)
+    }
+
+
+
+    // internal helper
+    fn pin_direction_to_output(&mut self, pin: &mut Pin<DynamicPin>) -> Result<(), AssistantPinOperationError> {
+        pin.set_direction::<HostToAssistant>(pin::Direction::Output, &mut self.conn)
+           .map_err(|err| AssistantPinOperationError::SetPinDirectionInputError(err))
+    }
+
+
+
+
+
+
+
 
     /// Make the test-assistant's pin with number `pin` an Input pin.
     pub fn set_pin_direction_input(
@@ -485,5 +500,5 @@ pub enum AssistantPinOperationError {
     /// This pin cannot be configured, for example because it is reserved for internal use
     /// Or has already been created earlier
     IllegalPinNumber(PinNumber),
-    SetPinDirectionInputError(PinNumber, ConnSendError),
+    SetPinDirectionInputError(ConnSendError),
 }
