@@ -86,6 +86,32 @@ impl Assistant {
         }
     }
 
+    /// Set direction of pin at `pin_number` to Input.
+    /// Usage note: Use the returned `InputPin` struct for any operations on this pin
+    pub fn create_gpio_output_pin(
+        &mut self,
+        pin_number: PinNumber,
+    ) -> Result<OutputPin, AssistantPinOperationError> {
+        // TODO add coherence check to ensure we don't
+        // - assign more dynamic pins than possible
+        // -> and then return Err(AssistantPinOperationError::IllegalPinNumber(PinNumber))
+
+        match self.pins.remove(&pin_number) {
+            Some(mut pin) => {
+                pin.set_direction::<HostToAssistant>(pin::Direction::Input, &mut self.conn)
+                    .map_err(|err| {
+                        AssistantPinOperationError::SetPinDirectionInputError(err)
+                    })?;
+
+                Ok(OutputPin {
+                    pin_number: pin_number,
+                    pin: pin,
+                })
+            }
+            None => Err(AssistantPinOperationError::IllegalPinNumber(pin_number)),
+        }
+    }
+
     /// Convert this pin into an Output pin with initial voltage `voltage_level`
     pub fn to_output_pin(&mut self, mut input_pin: InputPin, _voltage_level: VoltageLevel ) -> Result<OutputPin, AssistantPinOperationError> {
         self.pin_direction_to_output(&mut input_pin.pin);
@@ -96,6 +122,8 @@ impl Assistant {
             pin: input_pin.pin,
         })
     }
+
+    // TODO add to_input_pin
 
     /// Indicates whether the GPIO pin `input_pin` receives a **Low** signal from the test target
     pub fn is_low(&mut self, input_pin: &mut InputPin) -> Result<bool, AssistantPinReadError> {
@@ -117,15 +145,24 @@ impl Assistant {
         Ok(pin_state.0 == pin::Level::High)
     }
 
+    /// Set the test-assistant's `output_pin` level to Low.
+    pub fn set_pin_low(&mut self, output_pin: &mut OutputPin) -> Result<(), AssistantSetPinLowError> {
+        output_pin.pin.set_level::<HostToAssistant>(pin::Level::Low, &mut self.conn)
+                      .map_err(|err| AssistantSetPinLowError(err))
+    }
+
+    /// Set the test-assistant's `output_pin` level to Low.
+    pub fn set_pin_high(&mut self, output_pin: &mut OutputPin) -> Result<(), AssistantSetPinLowError> {
+        output_pin.pin.set_level::<HostToAssistant>(pin::Level::High, &mut self.conn)
+                      .map_err(|err| AssistantSetPinLowError(err))
+    }
+
 
     // internal helper
     fn pin_direction_to_output(&mut self, pin: &mut Pin<DynamicPin>) -> Result<(), AssistantPinOperationError> {
         pin.set_direction::<HostToAssistant>(pin::Direction::Output, &mut self.conn)
            .map_err(|err| AssistantPinOperationError::SetPinDirectionInputError(err))
     }
-
-
-
 
 
 
