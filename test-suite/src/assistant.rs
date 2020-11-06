@@ -38,6 +38,14 @@ pub struct InputPin {
     pin: Pin<DynamicPin>,
 }
 
+pub struct OutputPin {
+    /// Note that the pin numbers used here correspond to the LPC845 breakout board pinouts counted
+    /// from top left counterclockwise to top right
+    /// (see https://www.nxp.com/assets/images/en/block-diagrams/LPC845-BRK-BD2.png )
+    pin_number: PinNumber,
+    pin: Pin<DynamicPin>,
+}
+
 pub struct InputPin2<'assistant, Assistant> {
     /// Note that the pin numbers used here correspond to the LPC845 breakout board pinouts counted
     /// from top left counterclockwise to top right
@@ -47,12 +55,13 @@ pub struct InputPin2<'assistant, Assistant> {
     assistant: &'assistant RwLock<Assistant>, // needed to access conn
 }
 
-pub struct OutputPin {
+pub struct OutputPin2<'assistant, Assistant> {
     /// Note that the pin numbers used here correspond to the LPC845 breakout board pinouts counted
     /// from top left counterclockwise to top right
     /// (see https://www.nxp.com/assets/images/en/block-diagrams/LPC845-BRK-BD2.png )
     pin_number: PinNumber,
     pin: Pin<DynamicPin>,
+    assistant: &'assistant RwLock<Assistant>, // needed to access conn
 }
 
 impl AssistantInterface<Assistant> {
@@ -75,7 +84,7 @@ impl AssistantInterface<Assistant> {
 
         let lock = self.real_assistant.try_write();
         // note to self: loop until we get the lock?
-        if let Ok(mut assistant) = lock {
+        if let Ok(mut assistant) = lock { // TODO make this a match instead?
             // pull pin out so it can't be reassigned
             match assistant.pins.remove(&pin_number) {
                 Some(mut pin) => {
@@ -95,6 +104,34 @@ impl AssistantInterface<Assistant> {
             }
         }
         Err(AssistantPinOperationError::AssistantLockedError)
+    }
+}
+
+impl<'assistant> InputPin2<'assistant, Assistant> {
+
+    /// Convert this pin into an Output pin with initial voltage `voltage_level`
+    pub fn to_output_pin(
+        &mut self,
+        mut input_pin: InputPin2<Assistant>,
+        _voltage_level: VoltageLevel,
+    ) -> Result<OutputPin2<Assistant>, AssistantPinOperationError> {
+
+        // note to self: loop until we get the lock?
+        let lock = self.assistant.try_write();
+
+        match lock {
+            Ok(mut assistant) => {
+                assistant.pin_direction_to_output(&mut input_pin.pin).unwrap();
+                // TODO pass voltage_level on to t-a
+
+                Ok(OutputPin2 {
+                    pin_number: input_pin.pin_number,
+                    pin: input_pin.pin,
+                    assistant: input_pin.assistant,
+                })
+            }
+            Err(_) => Err(AssistantPinOperationError::AssistantLockedError)
+        }
     }
 }
 

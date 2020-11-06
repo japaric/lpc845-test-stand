@@ -11,8 +11,8 @@ fn in_out_changes_should_be_consuming() -> Result {
     let test_assistant = TestStand::new()?.assistant;
 
     // RUN TEST
-    let _in_pin = test_assistant.create_gpio_input_pin(TEST_PIN)?;
-    //let _out_pin = test_assistant.to_output_pin(in_pin, VoltageLevel::Low)?;
+    let in_pin = test_assistant.create_gpio_input_pin(TEST_PIN)?;
+    let _out_pin = in_pin.to_output_pin(in_pin, VoltageLevel::Low)?;
 
     // Note: calling
     // in_pin.is_low();
