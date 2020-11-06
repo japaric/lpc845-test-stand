@@ -19,16 +19,15 @@ const GRN_LED: DynamicPin = DynamicPin::GPIO(31);
 fn it_should_set_pin_level() -> Result {
     // SETUP
     let mut test_stand = TestStand::new()?;
-
-    let mut in_pin = test_stand.assistant.create_gpio_input_pin(GRN_LED_PIN)?;
-
-    // TEST & ASSERT POSTCONDITION
-    test_stand.target.set_pin_low()?;
-    assert!(test_stand.assistant.is_low(&mut in_pin)?);
+    test_stand.assistant.set_pin_direction_input(GRN_LED)?;
 
     // TEST & ASSERT POSTCONDITION
-    //test_stand.target.set_pin_high()?;
-    //assert!(test_stand.assistant.input_pin_is_high(GRN_LED)?);
+    //test_stand.target.set_pin_low()?;
+    //assert!(test_stand.assistant.input_pin_is_low(GRN_LED)?);
+
+    // TEST & ASSERT POSTCONDITION
+    test_stand.target.set_pin_high()?;
+    assert!(test_stand.assistant.input_pin_is_high(GRN_LED)?);
 
     Ok(())
 }

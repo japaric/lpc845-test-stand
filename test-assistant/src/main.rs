@@ -577,7 +577,7 @@ const APP: () = {
                                 // todo nicer and more generic once we resolve the Pin Type Conundrum
                                 match level {
                                     pin::Level::High => {
-                                        rprintln!("dynamic HIGH for {:?}", pin);
+                                       // rprintln!("dynamic HIGH for {:?}", pin);
                                         match pin {
                                             PININT3_DYN_PIN => pinint3_pin.set_high(),
                                             PININT0_DYN_PIN => pinint0_pin.set_high(),
@@ -586,7 +586,7 @@ const APP: () = {
                                         };
                                     }
                                     pin::Level::Low => {
-                                        rprintln!("dynamic LOW for {:?}", pin);
+                                       // rprintln!("dynamic LOW for {:?}", pin);
                                         match pin {
                                             PININT3_DYN_PIN => pinint3_pin.set_low(),
                                             PININT0_DYN_PIN => pinint0_pin.set_low(),
@@ -629,7 +629,7 @@ const APP: () = {
                                 direction: pin::Direction::Input,
                             }
                         ) => {
-                            rprintln!("SET DIRECTION -> INPUT for {:?}.", pin);
+                            rprintln!("DIR -> IN {:?}.", pin);
                             // todo nicer and more generic once we start enabling ALL the pins
                             // note: the problem with moving this to a helper is again that pin IDs are
                             // part of the GPIO type so we can't just move this into a
@@ -656,7 +656,7 @@ const APP: () = {
                                 direction: pin::Direction::Output,
                             }
                         ) => {
-                            rprintln!("SET DIRECTION -> OUTPUT for {:?}. Default Level LOW", pin);
+                            rprintln!("DIR -> OUT {:?}", pin);
                             // todo nicer and more generic once we start enabling ALL the pins
                             match pin {
                                 PININT3_DYN_PIN => pinint3_pin.switch_to_output(gpio::Level::Low),
@@ -674,7 +674,7 @@ const APP: () = {
                         HostToAssistant::ReadDynamicPin(
                             pin::ReadLevel { pin }
                         ) => {
-                            rprintln!("READ DYNAMIC PIN command for {:?}", pin);
+                            rprintln!("READ DYN {:?}", pin);
                             rprintln!("dynamic_pins: {:?}", dynamic_pins);
 
                             // todo nicer and more generic once we resolve the Pin Type Conundrum
@@ -707,7 +707,7 @@ const APP: () = {
                                 }
                             };
 
-                            rprintln!("sending read result: {:?}", result);
+                            rprintln!("sending result");
 
                             host_tx
                                 .send_message(

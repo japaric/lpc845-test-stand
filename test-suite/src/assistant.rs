@@ -107,6 +107,15 @@ impl Assistant {
         Ok(pin_state.0 == pin::Level::Low)
     }
 
+    /// Indicates whether the GPIO pin `input_pin` receives a **High** signal from the test target
+    pub fn is_high(&mut self, input_pin: &mut InputPin) -> Result<bool, AssistantPinReadError> {
+        let pin_state = input_pin.pin.read_level::<HostToAssistant, AssistantToHost>(
+            Duration::from_millis(10),
+            &mut self.conn,
+        )?;
+
+        Ok(pin_state.0 == pin::Level::High)
+    }
 
 
     // internal helper
