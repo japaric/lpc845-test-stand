@@ -29,7 +29,7 @@ pub struct Assistant {
     pins: HashMap<PinNumber, Pin<DynamicPin>>,
 }
 
-pub struct InputPin2<'assistant, Assistant> {
+pub struct InputPin<'assistant, Assistant> {
     /// Note that the pin numbers used here correspond to the LPC845 breakout board pinouts counted
     /// from top left counterclockwise to top right
     /// (see https://www.nxp.com/assets/images/en/block-diagrams/LPC845-BRK-BD2.png )
@@ -38,7 +38,7 @@ pub struct InputPin2<'assistant, Assistant> {
     assistant: &'assistant RwLock<Assistant>, // needed to access conn
 }
 
-pub struct OutputPin2<'assistant, Assistant> {
+pub struct OutputPin<'assistant, Assistant> {
     /// Note that the pin numbers used here correspond to the LPC845 breakout board pinouts counted
     /// from top left counterclockwise to top right
     /// (see https://www.nxp.com/assets/images/en/block-diagrams/LPC845-BRK-BD2.png )
@@ -59,7 +59,7 @@ impl AssistantInterface<Assistant> {
     pub fn create_gpio_input_pin(
         &self,
         pin_number: u8,
-    ) -> Result<InputPin2<Assistant>, AssistantPinOperationError> {
+    ) -> Result<InputPin<Assistant>, AssistantPinOperationError> {
         // TODO untangle match statement below
         // TODO add coherence check to ensure we don't
         // - assign pins that can't be dynamic
@@ -78,7 +78,7 @@ impl AssistantInterface<Assistant> {
                     )
                     .map_err(|err| AssistantPinOperationError::SetPinDirectionInputError(err)).unwrap();
 
-                    return Ok(InputPin2 {
+                    return Ok(InputPin {
                         assistant: &self.real_assistant,
                         pin_number: pin_number,
                         pin: pin,
@@ -93,7 +93,7 @@ impl AssistantInterface<Assistant> {
     pub fn create_gpio_output_pin(
         &self,
         pin_number: u8,
-    ) -> Result<OutputPin2<Assistant>, AssistantPinOperationError> {
+    ) -> Result<OutputPin<Assistant>, AssistantPinOperationError> {
         // TODO untangle match statement below
         // TODO add coherence check to ensure we don't
         // - assign more dynamic pins than possible
@@ -112,7 +112,7 @@ impl AssistantInterface<Assistant> {
                     )
                     .map_err(|err| AssistantPinOperationError::SetPinDirectionInputError(err)).unwrap();
 
-                    return Ok(OutputPin2 {
+                    return Ok(OutputPin {
                         assistant: &self.real_assistant,
                         pin_number: pin_number,
                         pin: pin,
@@ -125,14 +125,15 @@ impl AssistantInterface<Assistant> {
     }
 }
 
-impl<'assistant> InputPin2<'assistant, Assistant> {
+// TODO rm 2s
+impl<'assistant> InputPin<'assistant, Assistant> {
 
     /// Convert this pin into an Output pin with initial voltage `voltage_level`
     /// NOTE: `voltage_level` is not passed to test-assistant yet; pin is always `Low`
     pub fn to_output_pin(
         mut self,
         _voltage_level: VoltageLevel,
-    ) -> Result<OutputPin2<'assistant, Assistant>, AssistantPinOperationError> {
+    ) -> Result<OutputPin<'assistant, Assistant>, AssistantPinOperationError> {
 
         // note to self: loop until we get the lock?
         let lock = self.assistant.try_write();
@@ -142,7 +143,7 @@ impl<'assistant> InputPin2<'assistant, Assistant> {
                 assistant.pin_direction_to_output(&mut self.pin).unwrap();
                 // TODO pass voltage_level on to t-a
 
-                Ok(OutputPin2 {
+                Ok(OutputPin {
                     pin_number: self.pin_number,
                     pin: self.pin,
                     assistant: self.assistant,
@@ -179,12 +180,12 @@ impl<'assistant> InputPin2<'assistant, Assistant> {
     }
 }
 
-impl<'assistant> OutputPin2<'assistant, Assistant> {
+impl<'assistant> OutputPin<'assistant, Assistant> {
 
     /// Convert this pin into an Input pin
     pub fn to_input_pin(
         mut self,
-    ) -> Result<InputPin2<'assistant, Assistant>, AssistantPinOperationError> {
+    ) -> Result<InputPin<'assistant, Assistant>, AssistantPinOperationError> {
 
         // note to self: loop until we get the lock?
         let lock = self.assistant.try_write();
@@ -193,7 +194,7 @@ impl<'assistant> OutputPin2<'assistant, Assistant> {
             Ok(mut assistant) => {
                 assistant.pin_direction_to_input(&mut self.pin).unwrap();
 
-                Ok(InputPin2 {
+                Ok(InputPin {
                     pin_number: self.pin_number,
                     pin: self.pin,
                     assistant: self.assistant,

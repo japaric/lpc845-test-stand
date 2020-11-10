@@ -55,7 +55,7 @@ fn assistant_red_led_should_be_toggleable_by_pin_direction() -> Result {
     let test_stand = TestStand::new()?;
     // ensure pin is low (-> red led is on) when we start
     let mut out_pin = test_stand.assistant.create_gpio_output_pin(RED_LED_PIN)?;
-    let mut in_pin: InputPin2<Assistant>; // we'll need this during the loop
+    let mut in_pin: InputPin<Assistant>; // we'll need this during the loop
     out_pin.set_low()?;
 
     // RUN TEST

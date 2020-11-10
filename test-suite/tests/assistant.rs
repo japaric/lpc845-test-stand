@@ -30,8 +30,7 @@ fn in_out_changes_should_be_consuming() -> Result {
 fn in_pin_should_not_be_creatable_twice() -> Result {
     // SETUP
     let test_assistant = TestStand::new()?.assistant;
-    let in_pin_1 = test_assistant.create_gpio_input_pin(TEST_PIN);
-    assert!(in_pin_1.is_ok());
+    let in_pin_1 = test_assistant.create_gpio_input_pin(TEST_PIN)?;
 
     // RUN TEST
     let in_pin_2 = test_assistant.create_gpio_input_pin(TEST_PIN);
@@ -47,8 +46,7 @@ fn in_pin_should_not_be_creatable_twice() -> Result {
 fn out_pin_should_not_be_creatable_twice() -> Result {
     // SETUP
     let test_assistant = TestStand::new()?.assistant;
-    let out_pin_1 = test_assistant.create_gpio_output_pin(TEST_PIN);
-    assert!(out_pin_1.is_ok());
+    let out_pin_1 = test_assistant.create_gpio_output_pin(TEST_PIN)?;
 
     // RUN TEST
     let out_pin_2 = test_assistant.create_gpio_output_pin(TEST_PIN);
