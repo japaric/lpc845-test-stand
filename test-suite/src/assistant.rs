@@ -21,7 +21,6 @@ pub struct AssistantInterface<Assistant> {
 }
 
 /// The connection to the test assistant
-// TODO: doesn't have to be pub after refactoring #3?
 pub struct Assistant {
     conn: Conn,
     /// all of the assitant's GPIO pins, keyed by pin number (Arduino style)
@@ -47,6 +46,7 @@ pub struct OutputPin<'assistant, Assistant> {
 }
 
 impl AssistantInterface<Assistant> {
+    /// TODO add docs
     pub fn new(conn: Conn, num_pins: u8) -> Self {
         let assistant = Assistant::new(conn, num_pins);
 
@@ -55,6 +55,7 @@ impl AssistantInterface<Assistant> {
         }
     }
 
+    /// TODO add docs
     pub fn create_gpio_input_pin(
         &self,
         pin_number: u8,
@@ -88,6 +89,7 @@ impl AssistantInterface<Assistant> {
         Err(AssistantPinOperationError::AssistantLockedError)
     }
 
+    /// TODO add docs
     pub fn create_gpio_output_pin(
         &self,
         pin_number: u8,
@@ -123,7 +125,7 @@ impl AssistantInterface<Assistant> {
     }
 }
 
-// TODO rm 2s
+/// TODO add docs
 impl<'assistant> InputPin<'assistant, Assistant> {
     /// Convert this pin into an Output pin with initial voltage `level`.
     pub fn to_output_pin(
@@ -179,6 +181,7 @@ impl<'assistant> InputPin<'assistant, Assistant> {
     }
 }
 
+/// TODO add docs
 impl<'assistant> OutputPin<'assistant, Assistant> {
     /// Convert this pin into an Input pin
     pub fn to_input_pin(
