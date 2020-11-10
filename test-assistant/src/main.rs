@@ -669,7 +669,7 @@ const APP: () = {
                         ) => {
                             rprintln!("SET DIRECTION -> OUTPUT for {:?}. Level {:?}", pin, level);
                             // convert from lpc8xx_hal::gpio::Level to protocol::pin::Level
-                            // TODO impl into instead?
+                            // TODO impl From instead?
                             let gpio_level = match level {
                                 pin::Level::High => {gpio::Level::High}
                                 pin::Level::Low => {gpio::Level::Low}

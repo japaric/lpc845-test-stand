@@ -86,21 +86,19 @@ fn assistant_red_led_should_be_toggleable_by_pin_direction() -> Result {
 
 #[test]
 fn wonky_in_out_conversion_should_work() -> Result {
-
     // SETUP
     let mut test_stand = TestStand::new()?;
     // ensure pin is low (-> red led is on) when we start
     let mut out_pin = test_stand
         .assistant
-        .create_gpio_output_pin(RED_LED_PIN, Level::High)?; // TODO undo
-    let mut in_pin: InputPin<Assistant>; // we'll need this during the loop
-    out_pin.set_low()?; // note to self this somehow makes the next call to in_pin.to_output_pin(Level::High)
-                        // fail -> fix this!
+        .create_gpio_output_pin(RED_LED_PIN, Level::Low)?;
+    assert!(test_stand.target.pin_is_low()?);
 
-    in_pin = out_pin.to_input_pin()?;
+    let mut in_pin = out_pin.to_input_pin()?;
     sleep(time::Duration::from_secs(2));
-    out_pin = in_pin.to_output_pin(Level::High)?; // TODO undo
-    assert!(test_stand.target.pin_is_high()?); // TODO undo
+
+    out_pin = in_pin.to_output_pin(Level::High)?;
+    assert!(test_stand.target.pin_is_high()?);
 
     Ok(())
 }
