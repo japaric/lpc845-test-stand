@@ -28,15 +28,8 @@ pub struct SetDirection<Id> {
 
     /// The new direction of the pin
     pub direction: Direction,
-}
 
-/// Sent by the host to command a test node to configure a dynamic pin as output
-#[derive(Clone, Copy, Debug, Deserialize, Serialize, Eq, PartialEq)]
-pub struct SetDirectionOutput<Id> {
-    /// The pin which should be set to output
-    pub pin: Id,
-
-    /// The initial level the pin should be set to
+    /// The initial level the pin should be set to. Ignored if `direction` is Input.
     pub level: Level,
 }
 

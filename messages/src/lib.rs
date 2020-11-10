@@ -133,9 +133,6 @@ pub enum HostToAssistant<'r> {
 
     /// Instruct the assistant to change the direction of `DynamicPin`
     SetDirection(pin::SetDirection<DynamicPin>),
-
-    /// Instruct the assistant to change the direction of `DynamicPin` to Output
-    SetDirectionOutput(pin::SetDirectionOutput<DynamicPin>),
 }
 
 impl From<pin::SetLevel<OutputPin>> for HostToAssistant<'_> {
@@ -153,12 +150,6 @@ impl From<pin::ReadLevel<InputPin>> for HostToAssistant<'_> {
 impl From<pin::SetDirection<DynamicPin>> for HostToAssistant<'_> {
     fn from(set_direction: pin::SetDirection<DynamicPin>) -> Self {
         Self::SetDirection(set_direction)
-    }
-}
-
-impl From<pin::SetDirectionOutput<DynamicPin>> for HostToAssistant<'_> {
-    fn from(set_direction_output: pin::SetDirectionOutput<DynamicPin>) -> Self {
-        Self::SetDirectionOutput(set_direction_output)
     }
 }
 

@@ -628,6 +628,7 @@ const APP: () = {
                             pin::SetDirection {
                                 pin,
                                 direction: pin::Direction::Input,
+                                level: _,
                             }
                         ) => {
                             rprintln!("SET DIRECTION -> INPUT for {:?}.", pin);
@@ -653,17 +654,8 @@ const APP: () = {
                         },
                         HostToAssistant::SetDirection(
                             pin::SetDirection {
-                                pin: _,
-                                direction: pin::Direction::Output,
-                            }
-                        ) => {
-                            // this msg shgould not be used to set output
-                            // TODO refactor out completely
-                            unreachable!()
-                        },
-                        HostToAssistant::SetDirectionOutput(
-                            pin::SetDirectionOutput {
                                 pin,
+                                direction: pin::Direction::Output,
                                 level,
                             }
                         ) => {

@@ -61,16 +61,18 @@ impl<Id> Pin<Id>
         Ok(())
     }
 
-    /// Commands the node to change pin direction
-    pub fn set_direction<M>(&mut self,
-        direction: pin::Direction,
+    /// Commands the node to change pin direction to input
+    pub fn set_direction_input<M>(&mut self,
         conn: &mut Conn,
     )
         -> Result<(), ConnSendError>
         where
             M: From<pin::SetDirection<Id>> + Serialize,
     {
-        let command = pin::SetDirection { pin: self.pin, direction };
+        // pin level is irrelevant but let's pass low to be on the safe side
+        let command = pin::SetDirection { pin: self.pin,
+                                                         direction: pin::Direction::Input,
+                                                         level: pin::Level::Low };
         let message: M = command.into();
         conn.send(&message)?;
 
@@ -84,9 +86,11 @@ impl<Id> Pin<Id>
     )
         -> Result<(), ConnSendError>
         where
-            M: From<pin::SetDirectionOutput<Id>> + Serialize,
+            M: From<pin::SetDirection<Id>> + Serialize,
     {
-        let command = pin::SetDirectionOutput { pin: self.pin, level: level };
+        let command = pin::SetDirection { pin: self.pin,
+                                                         direction: pin::Direction::Output,
+                                                         level: level };
         let message: M = command.into();
         conn.send(&message)?;
 

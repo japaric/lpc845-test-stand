@@ -54,7 +54,7 @@ fn target_should_read_input_level() -> Result {
 #[allow(unused_assignments)] // to silence the last conversion
 fn assistant_red_led_should_be_toggleable_by_pin_direction() -> Result {
     // SETUP
-    let mut test_stand = TestStand::new()?;
+    let test_stand = TestStand::new()?;
     // ensure pin is low (-> red led is on) when we start
     let mut out_pin = test_stand
         .assistant
@@ -86,6 +86,7 @@ fn assistant_red_led_should_be_toggleable_by_pin_direction() -> Result {
 }
 
 #[test]
+#[allow(unused_assignments)] // to silence the last conversion
 fn wonky_in_out_conversion_should_work() -> Result {
     // SETUP
     let mut test_stand = TestStand::new()?;
@@ -95,7 +96,7 @@ fn wonky_in_out_conversion_should_work() -> Result {
         .create_gpio_output_pin(RED_LED_PIN, Level::Low)?;
     assert!(test_stand.target.pin_is_low()?);
 
-    let mut in_pin = out_pin.to_input_pin()?;
+    let in_pin = out_pin.to_input_pin()?;
     sleep(time::Duration::from_secs(2));
 
     out_pin = in_pin.to_output_pin(Level::High)?;

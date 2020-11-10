@@ -72,8 +72,7 @@ impl AssistantInterface<Assistant> {
             // pull pin out so it can't be reassigned
             match assistant.pins.remove(&pin_number) {
                 Some(mut pin) => {
-                    pin.set_direction::<HostToAssistant>(
-                        pin::Direction::Input,
+                    pin.set_direction_input::<HostToAssistant>(
                         &mut assistant.conn,
                     )
                     .map_err(|err| AssistantPinOperationError::SetPinDirectionInputError(err))
@@ -267,7 +266,7 @@ impl Assistant {
         &mut self,
         pin: &mut Pin<DynamicPin>,
     ) -> Result<(), AssistantPinOperationError> {
-        pin.set_direction::<HostToAssistant>(pin::Direction::Input, &mut self.conn)
+        pin.set_direction_input::<HostToAssistant>(&mut self.conn)
             .map_err(|err| AssistantPinOperationError::SetPinDirectionInputError(err))
     }
 
@@ -282,7 +281,7 @@ impl Assistant {
                 .pins
                 .get_mut(&pin_number)
                 .unwrap()
-                .set_direction::<HostToAssistant>(pin::Direction::Input, &mut self.conn)
+                .set_direction_input::<HostToAssistant>(&mut self.conn)
                 .map_err(|err| AssistantSetPinDirectionInputError(err)),
             _ => todo!(),
         }
