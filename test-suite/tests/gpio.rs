@@ -54,28 +54,29 @@ fn target_should_read_input_level() -> Result {
 #[allow(unused_assignments)] // to silence the last conversion
 fn assistant_red_led_should_be_toggleable_by_pin_direction() -> Result {
     // SETUP
-    let test_stand = TestStand::new()?;
+    let mut test_stand = TestStand::new()?;
     // ensure pin is low (-> red led is on) when we start
-    let mut out_pin = test_stand.assistant.create_gpio_output_pin(RED_LED_PIN)?;
+    let mut out_pin = test_stand
+        .assistant
+        .create_gpio_output_pin(RED_LED_PIN, Level::Low)?;
     let mut in_pin: InputPin<Assistant>; // we'll need this during the loop
-    out_pin.set_low()?;
 
     // RUN TEST
     // TODO: figure out how to do this in a loop without move trouble
-
     in_pin = out_pin.to_input_pin()?;
     sleep(time::Duration::from_secs(2));
-    out_pin = in_pin.to_output_pin(VoltageLevel::Low)?;
-    sleep(time::Duration::from_secs(2));
-
-    in_pin = out_pin.to_input_pin()?;
-    sleep(time::Duration::from_secs(2));
-    out_pin = in_pin.to_output_pin(VoltageLevel::Low)?;
+    out_pin = in_pin.to_output_pin(Level::Low)?;
     sleep(time::Duration::from_secs(2));
 
     in_pin = out_pin.to_input_pin()?;
     sleep(time::Duration::from_secs(2));
-    out_pin = in_pin.to_output_pin(VoltageLevel::Low)?;
+    out_pin = in_pin.to_output_pin(Level::Low)?;
+    sleep(time::Duration::from_secs(2));
+
+    in_pin = out_pin.to_input_pin()?;
+    sleep(time::Duration::from_secs(2));
+    out_pin = in_pin.to_output_pin(Level::Low)?;
+
     sleep(time::Duration::from_secs(2));
 
     // ASSERT POSTCONDITION
