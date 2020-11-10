@@ -72,11 +72,9 @@ impl AssistantInterface<Assistant> {
             // pull pin out so it can't be reassigned
             match assistant.pins.remove(&pin_number) {
                 Some(mut pin) => {
-                    pin.set_direction_input::<HostToAssistant>(
-                        &mut assistant.conn,
-                    )
-                    .map_err(|err| AssistantPinOperationError::SetPinDirectionInputError(err))
-                    .unwrap();
+                    pin.set_direction_input::<HostToAssistant>(&mut assistant.conn)
+                        .map_err(|err| AssistantPinOperationError::SetPinDirectionInputError(err))
+                        .unwrap();
 
                     return Ok(InputPin {
                         assistant: &self.real_assistant,
@@ -137,7 +135,9 @@ impl<'assistant> InputPin<'assistant, Assistant> {
 
         match lock {
             Ok(mut assistant) => {
-                assistant.pin_direction_to_output(&mut self.pin, level).unwrap();
+                assistant
+                    .pin_direction_to_output(&mut self.pin, level)
+                    .unwrap();
                 // TODO pass voltage_level on to t-a
 
                 Ok(OutputPin {
@@ -291,7 +291,7 @@ impl Assistant {
     pub fn set_pin_direction_output(
         &mut self,
         pin: DynamicPin,
-        level: pin::Level
+        level: pin::Level,
     ) -> Result<(), AssistantSetPinDirectionOutputError> {
         match pin {
             DynamicPin::GPIO(pin_number) => self

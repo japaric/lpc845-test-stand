@@ -69,10 +69,9 @@ impl<Id> Pin<Id>
         where
             M: From<pin::SetDirection<Id>> + Serialize,
     {
-        // pin level is irrelevant but let's pass low to be on the safe side
         let command = pin::SetDirection { pin: self.pin,
                                                          direction: pin::Direction::Input,
-                                                         level: pin::Level::Low };
+                                                         level: None };
         let message: M = command.into();
         conn.send(&message)?;
 
@@ -90,7 +89,7 @@ impl<Id> Pin<Id>
     {
         let command = pin::SetDirection { pin: self.pin,
                                                          direction: pin::Direction::Output,
-                                                         level: level };
+                                                         level: Some(level) };
         let message: M = command.into();
         conn.send(&message)?;
 

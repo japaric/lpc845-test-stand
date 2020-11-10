@@ -628,7 +628,7 @@ const APP: () = {
                             pin::SetDirection {
                                 pin,
                                 direction: pin::Direction::Input,
-                                level: _,
+                                level: None,
                             }
                         ) => {
                             rprintln!("SET DIRECTION -> INPUT for {:?}.", pin);
@@ -656,7 +656,7 @@ const APP: () = {
                             pin::SetDirection {
                                 pin,
                                 direction: pin::Direction::Output,
-                                level,
+                                level: Some(level),
                             }
                         ) => {
                             rprintln!("SET DIRECTION -> OUTPUT for {:?}. Level {:?}", pin, level);
@@ -680,6 +680,17 @@ const APP: () = {
                                 _ => todo!(),
                             };
                             Ok(())
+                        },
+                        HostToAssistant::SetDirection(
+                            pin::SetDirection {
+                                pin: _,
+                                direction: _,
+                                level: _,
+                            }
+                        ) => {
+                            // illegal level/direction combination
+                            // TODO handle error more neatly
+                            unreachable!()
                         },
                         HostToAssistant::ReadDynamicPin(
                             pin::ReadLevel { pin }

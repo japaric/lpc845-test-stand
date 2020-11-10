@@ -30,7 +30,7 @@ pub struct SetDirection<Id> {
     pub direction: Direction,
 
     /// The initial level the pin should be set to. Ignored if `direction` is Input.
-    pub level: Level,
+    pub level: Option<Level>,
 }
 
 /// Sent by the host to request the current level of a pin
