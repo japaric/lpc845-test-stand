@@ -556,7 +556,8 @@ const APP: () = {
                                 level: _,
                             }
                         ) => {
-                            // currently we don't have defined any non-dynamic Input Pins that could be set
+                            // currently we don't have defined any non-dynamic Output Pins that could be set
+                            // TODO refactor back: this should be usable
                             unreachable!()
                         }
                         HostToAssistant::SetDynamicPin(
@@ -652,16 +653,33 @@ const APP: () = {
                         },
                         HostToAssistant::SetDirection(
                             pin::SetDirection {
-                                pin,
+                                pin: _,
                                 direction: pin::Direction::Output,
                             }
                         ) => {
-                            rprintln!("SET DIRECTION -> OUTPUT for {:?}. Default Level LOW", pin);
+                            // this msg shgould not be used to set output
+                            // TODO refactor out completely
+                            unreachable!()
+                        },
+                        HostToAssistant::SetDirectionOutput(
+                            pin::SetDirectionOutput {
+                                pin,
+                                level,
+                            }
+                        ) => {
+                            rprintln!("SET DIRECTION -> OUTPUT for {:?}. Level {:?}", pin, level);
+                            // convert from lpc8xx_hal::gpio::Level to protocol::pin::Level
+                            // TODO impl into instead?
+                            let gpio_level = match level {
+                                pin::Level::High => {gpio::Level::High}
+                                pin::Level::Low => {gpio::Level::Low}
+                            };
+
                             // todo nicer and more generic once we start enabling ALL the pins
                             match pin {
-                                PININT3_DYN_PIN => pinint3_pin.switch_to_output(gpio::Level::Low),
-                                PININT0_DYN_PIN => pinint0_pin.switch_to_output(gpio::Level::Low),
-                                DynamicPin::GPIO(CTS_PIN_NUMBER) => cts.switch_to_output(gpio::Level::Low),
+                                PININT3_DYN_PIN => pinint3_pin.switch_to_output(gpio_level),
+                                PININT0_DYN_PIN => pinint0_pin.switch_to_output(gpio_level),
+                                DynamicPin::GPIO(CTS_PIN_NUMBER) => cts.switch_to_output(gpio_level),
                                 DynamicPin::GPIO(RTS_PIN_NUMBER) => {
                                     // TODO proper error handling
                                     rprintln!("RTS pin is never Output");

@@ -131,8 +131,11 @@ pub enum HostToAssistant<'r> {
     /// Ask the assistant for the current level of a dynamic pin if direction is output
     ReadDynamicPin(pin::ReadLevel<DynamicPin>),
 
-    /// Instruct the assistant to change the direction of its pin
+    /// Instruct the assistant to change the direction of `DynamicPin`
     SetDirection(pin::SetDirection<DynamicPin>),
+
+    /// Instruct the assistant to change the direction of `DynamicPin` to Output
+    SetDirectionOutput(pin::SetDirectionOutput<DynamicPin>),
 }
 
 impl From<pin::SetLevel<OutputPin>> for HostToAssistant<'_> {
@@ -150,6 +153,12 @@ impl From<pin::ReadLevel<InputPin>> for HostToAssistant<'_> {
 impl From<pin::SetDirection<DynamicPin>> for HostToAssistant<'_> {
     fn from(set_direction: pin::SetDirection<DynamicPin>) -> Self {
         Self::SetDirection(set_direction)
+    }
+}
+
+impl From<pin::SetDirectionOutput<DynamicPin>> for HostToAssistant<'_> {
+    fn from(set_direction_output: pin::SetDirectionOutput<DynamicPin>) -> Self {
+        Self::SetDirectionOutput(set_direction_output)
     }
 }
 
@@ -228,17 +237,7 @@ pub enum UsartMode {
     Sync,
 }
 
-
 pub type PinNumber = u8;
-
-/// The voltage level of a pin
-#[derive(Debug)]
-pub enum VoltageLevel {
-    /// High voltage
-    High,
-    /// Low voltage
-    Low,
-}
 
 /// Represents one of the pins that the assistant is monitoring
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, Eq, PartialEq)]

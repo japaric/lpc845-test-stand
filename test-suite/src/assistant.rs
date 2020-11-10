@@ -7,9 +7,8 @@ use host_lib::{
     conn::{Conn, ConnReceiveError, ConnSendError},
     pin::{Pin, ReadLevelError},
 };
-use lpc845_messages::{
-    pin, AssistantToHost, DynamicPin, HostToAssistant, PinNumber, UsartMode, VoltageLevel,
-};
+
+use lpc845_messages::{pin, AssistantToHost, DynamicPin, HostToAssistant, PinNumber, UsartMode};
 
 // TODO find a place to share them with t-a and t-t?
 /// some commonly used pin numbers
@@ -68,7 +67,8 @@ impl AssistantInterface<Assistant> {
 
         let lock = self.real_assistant.try_write();
         // note to self: loop until we get the lock?
-        if let Ok(mut assistant) = lock { // TODO make this a match instead?
+        if let Ok(mut assistant) = lock {
+            // TODO make this a match instead?
             // pull pin out so it can't be reassigned
             match assistant.pins.remove(&pin_number) {
                 Some(mut pin) => {
@@ -76,7 +76,8 @@ impl AssistantInterface<Assistant> {
                         pin::Direction::Input,
                         &mut assistant.conn,
                     )
-                    .map_err(|err| AssistantPinOperationError::SetPinDirectionInputError(err)).unwrap();
+                    .map_err(|err| AssistantPinOperationError::SetPinDirectionInputError(err))
+                    .unwrap();
 
                     return Ok(InputPin {
                         assistant: &self.real_assistant,
@@ -93,6 +94,7 @@ impl AssistantInterface<Assistant> {
     pub fn create_gpio_output_pin(
         &self,
         pin_number: u8,
+        level: pin::Level,
     ) -> Result<OutputPin<Assistant>, AssistantPinOperationError> {
         // TODO untangle match statement below
         // TODO add coherence check to ensure we don't
@@ -102,15 +104,14 @@ impl AssistantInterface<Assistant> {
 
         let lock = self.real_assistant.try_write();
         // note to self: loop until we get the lock?
-        if let Ok(mut assistant) = lock { // TODO make this a match instead?
+        if let Ok(mut assistant) = lock {
+            // TODO make this a match instead?
             // pull pin out so it can't be reassigned
             match assistant.pins.remove(&pin_number) {
                 Some(mut pin) => {
-                    pin.set_direction::<HostToAssistant>(
-                        pin::Direction::Output,
-                        &mut assistant.conn,
-                    )
-                    .map_err(|err| AssistantPinOperationError::SetPinDirectionInputError(err)).unwrap();
+                    pin.set_direction_output::<HostToAssistant>(level, &mut assistant.conn)
+                        .map_err(|err| AssistantPinOperationError::SetPinDirectionInputError(err))
+                        .unwrap();
 
                     return Ok(OutputPin {
                         assistant: &self.real_assistant,
@@ -127,20 +128,17 @@ impl AssistantInterface<Assistant> {
 
 // TODO rm 2s
 impl<'assistant> InputPin<'assistant, Assistant> {
-
-    /// Convert this pin into an Output pin with initial voltage `voltage_level`
-    /// NOTE: `voltage_level` is not passed to test-assistant yet; pin is always `Low`
+    /// Convert this pin into an Output pin with initial voltage `level`.
     pub fn to_output_pin(
         mut self,
-        _voltage_level: VoltageLevel,
+        level: pin::Level,
     ) -> Result<OutputPin<'assistant, Assistant>, AssistantPinOperationError> {
-
         // note to self: loop until we get the lock?
         let lock = self.assistant.try_write();
 
         match lock {
             Ok(mut assistant) => {
-                assistant.pin_direction_to_output(&mut self.pin).unwrap();
+                assistant.pin_direction_to_output(&mut self.pin, level).unwrap();
                 // TODO pass voltage_level on to t-a
 
                 Ok(OutputPin {
@@ -149,44 +147,44 @@ impl<'assistant> InputPin<'assistant, Assistant> {
                     assistant: self.assistant,
                 })
             }
-            Err(_) => Err(AssistantPinOperationError::AssistantLockedError)
+            Err(_) => Err(AssistantPinOperationError::AssistantLockedError),
         }
     }
 
     /// Indicates whether this pin receives a **Low** signal from the test target
-    pub fn is_low(&mut self) -> Result< bool, AssistantPinOperationError> {
+    pub fn is_low(&mut self) -> Result<bool, AssistantPinOperationError> {
         // TODO handle lock getting failures better
         let lock = self.assistant.try_write();
         match lock {
             Ok(mut assistant) => {
-                let pin_state = self.pin
+                let pin_state = self
+                    .pin
                     .read_level::<HostToAssistant, AssistantToHost>(
                         Duration::from_millis(10),
-                        &mut assistant.conn)
+                        &mut assistant.conn,
+                    )
                     .map_err(|err| AssistantPinOperationError::ReadPinError(err))?;
 
-                    Ok(pin_state.0 == pin::Level::Low)
+                Ok(pin_state.0 == pin::Level::Low)
             }
-            Err(_) => Err(AssistantPinOperationError::AssistantLockedError)
+            Err(_) => Err(AssistantPinOperationError::AssistantLockedError),
         }
     }
 
     /// Indicates whether this pin receives a **High** signal from the test target
     pub fn is_high(&mut self) -> Result<bool, AssistantPinOperationError> {
         match self.is_low() {
-            Ok(is_low) => { Ok(!is_low) }
-            Err(err) => {Err(err)}
+            Ok(is_low) => Ok(!is_low),
+            Err(err) => Err(err),
         }
     }
 }
 
 impl<'assistant> OutputPin<'assistant, Assistant> {
-
     /// Convert this pin into an Input pin
     pub fn to_input_pin(
         mut self,
     ) -> Result<InputPin<'assistant, Assistant>, AssistantPinOperationError> {
-
         // note to self: loop until we get the lock?
         let lock = self.assistant.try_write();
 
@@ -200,21 +198,20 @@ impl<'assistant> OutputPin<'assistant, Assistant> {
                     assistant: self.assistant,
                 })
             }
-            Err(_) => Err(AssistantPinOperationError::AssistantLockedError)
+            Err(_) => Err(AssistantPinOperationError::AssistantLockedError),
         }
     }
 
     /// Set this pin's level to Low.
     pub fn set_low(&mut self) -> Result<(), AssistantPinOperationError> {
-         // TODO handle lock getting failures better
+        // TODO handle lock getting failures better
         let lock = self.assistant.try_write();
         match lock {
-            Ok(mut assistant) => {
-                self.pin
-                    .set_level::<HostToAssistant>(pin::Level::Low, &mut assistant.conn)
-                    .map_err(|err| AssistantPinOperationError::SetPinLowError(err))
-            }
-            Err(_) => Err(AssistantPinOperationError::AssistantLockedError)
+            Ok(mut assistant) => self
+                .pin
+                .set_level::<HostToAssistant>(pin::Level::Low, &mut assistant.conn)
+                .map_err(|err| AssistantPinOperationError::SetPinLowError(err)),
+            Err(_) => Err(AssistantPinOperationError::AssistantLockedError),
         }
     }
 
@@ -223,12 +220,11 @@ impl<'assistant> OutputPin<'assistant, Assistant> {
         // TODO handle lock getting failures better
         let lock = self.assistant.try_write();
         match lock {
-            Ok(mut assistant) => {
-                self.pin
-                    .set_level::<HostToAssistant>(pin::Level::High, &mut assistant.conn)
-                    .map_err(|err| AssistantPinOperationError::SetPinLowError(err))
-            }
-            Err(_) => Err(AssistantPinOperationError::AssistantLockedError)
+            Ok(mut assistant) => self
+                .pin
+                .set_level::<HostToAssistant>(pin::Level::High, &mut assistant.conn)
+                .map_err(|err| AssistantPinOperationError::SetPinLowError(err)),
+            Err(_) => Err(AssistantPinOperationError::AssistantLockedError),
         }
     }
 }
@@ -249,7 +245,8 @@ impl Assistant {
         // make sure rts and cts have the right direction
         s.set_pin_direction_input(DynamicPin::GPIO(RTS_PIN_NUMBER))
             .unwrap();
-        s.set_pin_direction_output(DynamicPin::GPIO(CTS_PIN_NUMBER))
+        // TODO double check with old code if this is the correct default direction?
+        s.set_pin_direction_output(DynamicPin::GPIO(CTS_PIN_NUMBER), pin::Level::Low)
             .unwrap();
 
         return s;
@@ -259,8 +256,9 @@ impl Assistant {
     fn pin_direction_to_output(
         &mut self,
         pin: &mut Pin<DynamicPin>,
+        level: pin::Level,
     ) -> Result<(), AssistantPinOperationError> {
-        pin.set_direction::<HostToAssistant>(pin::Direction::Output, &mut self.conn)
+        pin.set_direction_output::<HostToAssistant>(level, &mut self.conn)
             .map_err(|err| AssistantPinOperationError::SetPinDirectionInputError(err))
     }
 
@@ -294,13 +292,14 @@ impl Assistant {
     pub fn set_pin_direction_output(
         &mut self,
         pin: DynamicPin,
+        level: pin::Level
     ) -> Result<(), AssistantSetPinDirectionOutputError> {
         match pin {
             DynamicPin::GPIO(pin_number) => self
                 .pins
                 .get_mut(&pin_number)
                 .unwrap()
-                .set_direction::<HostToAssistant>(pin::Direction::Output, &mut self.conn)
+                .set_direction_output::<HostToAssistant>(level, &mut self.conn)
                 .map_err(|err| AssistantSetPinDirectionOutputError(err)),
             _ => todo!(),
         }

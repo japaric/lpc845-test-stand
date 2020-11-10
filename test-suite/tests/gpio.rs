@@ -6,9 +6,9 @@
 use std::thread::sleep;
 use std::time;
 
-use lpc845_messages::{PinNumber, VoltageLevel};
+use lpc845_messages::{pin::Level, PinNumber};
+use lpc845_test_suite::assistant::{Assistant, InputPin};
 use lpc845_test_suite::{Result, TestStand};
-use lpc845_test_suite::assistant::{Assistant, InputPin2};
 
 const RED_LED_PIN: PinNumber = 29;
 const GRN_LED_PIN: PinNumber = 31;
@@ -35,8 +35,10 @@ fn target_should_set_pin_level() -> Result {
 #[test]
 fn target_should_read_input_level() -> Result {
     // SETUP
-    let mut test_stand =  TestStand::new()?;
-    let mut out_pin = test_stand.assistant.create_gpio_output_pin(RED_LED_PIN)?;
+    let mut test_stand = TestStand::new()?;
+    let mut out_pin = test_stand
+        .assistant
+        .create_gpio_output_pin(RED_LED_PIN, Level::Low)?;
 
     // RUN TEST
     out_pin.set_low()?;
@@ -83,10 +85,34 @@ fn assistant_red_led_should_be_toggleable_by_pin_direction() -> Result {
 }
 
 #[test]
+fn wonky_in_out_conversion_should_work() -> Result {
+
+    // SETUP
+    let mut test_stand = TestStand::new()?;
+    // ensure pin is low (-> red led is on) when we start
+    let mut out_pin = test_stand
+        .assistant
+        .create_gpio_output_pin(RED_LED_PIN, Level::High)?; // TODO undo
+    let mut in_pin: InputPin<Assistant>; // we'll need this during the loop
+    out_pin.set_low()?; // note to self this somehow makes the next call to in_pin.to_output_pin(Level::High)
+                        // fail -> fix this!
+
+    in_pin = out_pin.to_input_pin()?;
+    sleep(time::Duration::from_secs(2));
+    out_pin = in_pin.to_output_pin(Level::High)?; // TODO undo
+    assert!(test_stand.target.pin_is_high()?); // TODO undo
+
+    Ok(())
+}
+
+
+#[test]
 fn assistant_red_led_should_be_toggleable_by_level() -> Result {
     // SETUP
     let test_stand = TestStand::new()?;
-    let mut out_pin = test_stand.assistant.create_gpio_output_pin(RED_LED_PIN)?;
+    let mut out_pin = test_stand
+        .assistant
+        .create_gpio_output_pin(RED_LED_PIN, Level::Low)?;
     out_pin.set_high()?;
 
     // RUN TEST
