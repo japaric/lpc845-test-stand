@@ -24,10 +24,8 @@ fn target_should_set_pin_level() -> Result {
     assert!(in_pin.is_low()?);
 
     // TEST & ASSERT POSTCONDITION
-    // TODO I think I may have damaged my green pin by bedning during rewiring
-    // -> test this with other hw OR reconfig other assistant pin as input and rewire and test
-    // test_stand.target.set_pin_high()?;
-    // assert!(in_pin.is_high()?);
+    test_stand.target.set_pin_high()?;
+    assert!(in_pin.is_high()?);
 
     Ok(())
 }
