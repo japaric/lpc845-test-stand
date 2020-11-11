@@ -128,7 +128,7 @@ impl AssistantInterface<Assistant> {
 /// TODO add docs
 impl<'assistant> InputPin<'assistant, Assistant> {
     /// Convert this pin into an Output pin with initial voltage `level`.
-    pub fn to_output_pin(
+    pub fn into_output_pin(
         mut self,
         level: pin::Level,
     ) -> Result<OutputPin<'assistant, Assistant>, AssistantPinOperationError> {
@@ -184,7 +184,7 @@ impl<'assistant> InputPin<'assistant, Assistant> {
 /// TODO add docs
 impl<'assistant> OutputPin<'assistant, Assistant> {
     /// Convert this pin into an Input pin
-    pub fn to_input_pin(
+    pub fn into_input_pin(
         mut self,
     ) -> Result<InputPin<'assistant, Assistant>, AssistantPinOperationError> {
         // note to self: loop until we get the lock?

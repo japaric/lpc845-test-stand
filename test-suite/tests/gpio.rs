@@ -63,19 +63,19 @@ fn assistant_red_led_should_be_toggleable_by_pin_direction() -> Result {
 
     // RUN TEST
     // TODO: figure out how to do this in a loop without move trouble
-    in_pin = out_pin.to_input_pin()?;
+    in_pin = out_pin.into_input_pin()?;
     sleep(time::Duration::from_secs(2));
-    out_pin = in_pin.to_output_pin(Level::Low)?;
-    sleep(time::Duration::from_secs(2));
-
-    in_pin = out_pin.to_input_pin()?;
-    sleep(time::Duration::from_secs(2));
-    out_pin = in_pin.to_output_pin(Level::Low)?;
+    out_pin = in_pin.into_output_pin(Level::Low)?;
     sleep(time::Duration::from_secs(2));
 
-    in_pin = out_pin.to_input_pin()?;
+    in_pin = out_pin.into_input_pin()?;
     sleep(time::Duration::from_secs(2));
-    out_pin = in_pin.to_output_pin(Level::Low)?;
+    out_pin = in_pin.into_output_pin(Level::Low)?;
+    sleep(time::Duration::from_secs(2));
+
+    in_pin = out_pin.into_input_pin()?;
+    sleep(time::Duration::from_secs(2));
+    out_pin = in_pin.into_output_pin(Level::Low)?;
 
     sleep(time::Duration::from_secs(2));
 
@@ -96,10 +96,10 @@ fn wonky_in_out_conversion_should_work() -> Result {
         .create_gpio_output_pin(RED_LED_PIN, Level::Low)?;
     assert!(test_stand.target.pin_is_low()?);
 
-    let in_pin = out_pin.to_input_pin()?;
+    let in_pin = out_pin.into_input_pin()?;
     sleep(time::Duration::from_secs(2));
 
-    out_pin = in_pin.to_output_pin(Level::High)?;
+    out_pin = in_pin.into_output_pin(Level::High)?;
     assert!(test_stand.target.pin_is_high()?);
 
     Ok(())
