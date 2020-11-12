@@ -108,7 +108,7 @@ const RED_LED_PIN_NUMBER : u8 = 29;
 const GREEN_LED_PIN_NUMBER : u8 = 31;
 
 /// NOTE TO USERS: adjust the pins in this list to change which pin *could* be used as input pin.
-/// Currently only TODO Input-able pins are supported.
+/// Currently only two Input-able pins are supported.
 #[allow(non_camel_case_types)]
 type PININT0_PIN = lpc8xx_hal::pins::PIO1_0;                                 // make sure that these
 const PININT0_DYN_PIN: DynamicPin = DynamicPin::GPIO(GREEN_LED_PIN_NUMBER);  // two match!
@@ -148,8 +148,8 @@ const APP: () = {
         pinint3_int:  pin_interrupt::Int<'static, PININT3, PININT3_PIN, MRT3>,
         pinint3_idle: pin_interrupt::Idle<'static>,
 
-        rts: GpioPin<PIO0_9, Dynamic>,
-        cts: GpioPin<PIO0_8, Dynamic>,
+        rts: GpioPin<PIO0_9, Dynamic>, // TODO make unidirectional again
+        cts: GpioPin<PIO0_8, Dynamic>, // TODO make unidirectional again
         pinint0_pin: GpioPin<PININT0_PIN, Dynamic>, // pin that triggers PININT0 interrupt
         pinint3_pin: GpioPin<PININT3_PIN, Dynamic>, // pin that triggers PININT3 interrupt
 
@@ -203,7 +203,7 @@ const APP: () = {
 
         let pinint3_pin = p.pins.pio1_2.into_dynamic_pin(
             gpio.tokens.pio1_2,
-            gpio::Level::Low, // make red LED on by default // todo what if this is low by default
+            gpio::Level::Low,
         );
 
         let mut pinint3_int = pinint

@@ -22,31 +22,36 @@ pub struct AssistantInterface<Assistant> {
 
 /// The connection to the test assistant
 pub struct Assistant {
+    /// connection between test-assistant and host
     conn: Conn,
     /// all of the assitant's GPIO pins, keyed by pin number (Arduino style)
     pins: HashMap<PinNumber, Pin<DynamicPin>>,
 }
 
+/// A dynamically reconfigurable Pin whose current direction is input.
 pub struct InputPin<'assistant, Assistant> {
     /// Note that the pin numbers used here correspond to the LPC845 breakout board pinouts counted
     /// from top left counterclockwise to top right
     /// (see https://www.nxp.com/assets/images/en/block-diagrams/LPC845-BRK-BD2.png )
     pin_number: PinNumber,
     pin: Pin<DynamicPin>,
-    assistant: &'assistant RwLock<Assistant>, // needed to access conn
+    /// The test-assistant instance that manages this pin (needed to access conn)
+    assistant: &'assistant RwLock<Assistant>,
 }
 
+/// A dynamically reconfigurable Pin whose current direction is output.
 pub struct OutputPin<'assistant, Assistant> {
     /// Note that the pin numbers used here correspond to the LPC845 breakout board pinouts counted
     /// from top left counterclockwise to top right
     /// (see https://www.nxp.com/assets/images/en/block-diagrams/LPC845-BRK-BD2.png )
     pin_number: PinNumber,
     pin: Pin<DynamicPin>,
-    assistant: &'assistant RwLock<Assistant>, // needed to access conn
+    /// The test-assistant instance that manages this pin (needed to access conn)
+    assistant: &'assistant RwLock<Assistant>,
 }
 
+// TODO add docs
 impl AssistantInterface<Assistant> {
-    /// TODO add docs
     pub fn new(conn: Conn, num_pins: u8) -> Self {
         let assistant = Assistant::new(conn, num_pins);
 
@@ -55,7 +60,8 @@ impl AssistantInterface<Assistant> {
         }
     }
 
-    /// TODO add docs
+    /// Retrieve an InputPin instance that we can use to (re)configure the test-assistant's pin with
+    /// number `pin_number` at test runtime.
     pub fn create_gpio_input_pin(
         &self,
         pin_number: u8,
@@ -89,7 +95,10 @@ impl AssistantInterface<Assistant> {
         Err(AssistantPinOperationError::AssistantLockedError)
     }
 
-    /// TODO add docs
+
+    /// Retrieve an OutputPin instance that we can use to (re)configure the test-assistant's pin with
+    /// number `pin_number` at test runtime.
+    /// If this function returns without Error, the pin's voltage has been set to `level`.
     pub fn create_gpio_output_pin(
         &self,
         pin_number: u8,
@@ -125,7 +134,6 @@ impl AssistantInterface<Assistant> {
     }
 }
 
-/// TODO add docs
 impl<'assistant> InputPin<'assistant, Assistant> {
     /// Convert this pin into an Output pin with initial voltage `level`.
     pub fn into_output_pin(
@@ -181,7 +189,6 @@ impl<'assistant> InputPin<'assistant, Assistant> {
     }
 }
 
-/// TODO add docs
 impl<'assistant> OutputPin<'assistant, Assistant> {
     /// Convert this pin into an Input pin
     pub fn into_input_pin(
@@ -303,21 +310,6 @@ impl Assistant {
                 .unwrap()
                 .set_direction_output::<HostToAssistant>(level, &mut self.conn)
                 .map_err(|err| AssistantSetPinDirectionOutputError(err)),
-            _ => todo!(),
-        }
-    }
-
-    /// Set the test-assistant's `pin` level to Low.
-    /// Note that the direction of `pin` must be set to Output first!
-    /// Use `set_pin_direction_output()` for this.
-    pub fn set_output_pin_low(&mut self, pin: DynamicPin) -> Result<(), AssistantSetPinLowError> {
-        match pin {
-            DynamicPin::GPIO(pin_number) => self
-                .pins
-                .get_mut(&pin_number)
-                .unwrap()
-                .set_level::<HostToAssistant>(pin::Level::Low, &mut self.conn)
-                .map_err(|err| AssistantSetPinLowError(err)),
             _ => todo!(),
         }
     }

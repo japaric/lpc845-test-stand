@@ -30,8 +30,6 @@ pub enum HostToTarget<'r> {
     /// Ask the target for the current level of the input pin
     ReadPin(pin::ReadLevel<()>),
 
-    // todo add SetLevel for HostToTarget as well?
-
     /// Instruct the target to start the timer interrupt
     StartTimerInterrupt { period_ms: u32 },
 
@@ -122,8 +120,6 @@ pub enum HostToAssistant<'r> {
 
     /// Ask the assistant for the current level of a pin
     ReadPin(pin::ReadLevel<InputPin>),
-
-    // TODO: can I merge these getters/setters?
 
     /// Instruct the assistant to change level of the target's dynamic pin if direction is input
     SetDynamicPin(pin::SetLevel<DynamicPin>),
@@ -244,7 +240,6 @@ pub enum OutputPin {
     Cts,
 }
 
-// TODO typedef pin number?
 /// Represents one of the pins that the assistant can (re)configure at runtime
 /// Note that the pin numbers used here correspond to the LPC845 breakout board pinouts counted
 /// from top left counterclockwise to top right
