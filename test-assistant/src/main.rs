@@ -20,7 +20,10 @@ use heapless::{
 use lpc8xx_hal::{
     prelude::*,
     Peripherals,
-    cortex_m::interrupt,
+    cortex_m::{
+        interrupt,
+        peripheral::SYST,
+    },
     gpio::{
         self,
         GpioPin,
@@ -99,6 +102,16 @@ use lpc845_messages::{
     pin,
 };
 
+// By default (and we haven't changed that setting)
+// the SysTick timer runs at half the system
+// frequency. The system frequency runs at 12 MHz by
+// default (again, we haven't changed it), meaning
+// the SysTick timer runs at 6 MHz.
+//
+// At 6 MHz, 1 ms are 6000 timer ticks.
+// TODO: value picked for human reada/debuggability; adjust
+const TIMER_INT_PERIOD_MS : u32 = 100 * 6000; // fires every 100 milliseconds
+
 
 // TODO find a place to share them with t-s and t-t?
 /// some commonly used pin numbers
@@ -153,12 +166,13 @@ const APP: () = {
         pinint0_pin: GpioPin<PININT0_PIN, Dynamic>, // pin that triggers PININT0 interrupt
         pinint3_pin: GpioPin<PININT3_PIN, Dynamic>, // pin that triggers PININT3 interrupt
 
+        systick: SYST,
         i2c: i2c::Slave<I2C0, Enabled<PhantomData<IOSC>>, Enabled>,
         spi: SPI<SPI0, Enabled<spi::Slave>>,
     }
 
     #[init]
-    fn init(_: init::Context) -> init::LateResources {
+    fn init(context: init::Context) -> init::LateResources {
         // Normally, access to a `static mut` would be unsafe, but we know that
         // this method is only called once, which means we have exclusive access
         // here. RTFM knows this too, and by putting these statics right here,
@@ -179,6 +193,8 @@ const APP: () = {
         // Get access to the device's peripherals. This can't panic, since this
         // is the only place in this program where we call this method.
         let p = Peripherals::take().unwrap_or_else(|| unreachable!());
+
+        let systick = context.core.SYST;
 
         let mut syscon = p.SYSCON.split();
         let     swm    = p.SWM.split();
@@ -452,6 +468,7 @@ const APP: () = {
             cts,
             rts,
 
+            systick,
             i2c: i2c.slave,
             spi,
         }
@@ -473,7 +490,8 @@ const APP: () = {
             pinint3_pin,
             pinint0_pin,
             cts,
-            rts
+            rts,
+            systick
         ]
     )]
     fn idle(cx: idle::Context) -> ! {
@@ -492,12 +510,18 @@ const APP: () = {
         let pinint3_pin             = cx.resources.pinint3_pin;
         let cts            = cx.resources.cts;
         let rts            = cx.resources.rts;
-// IDEA: add 8 "empty" idle_green + greens (we don't allow more interrupts rn anyway)
-// and then assign interrupts to pins on SetDirection -> Input?
+        let systick        = cx.resources.systick;
+
         let mut pins = FnvIndexMap::<_, _, U4>::new();
         let mut dynamic_pins = FnvIndexMap::<_, _, U4>::new();
 
         let mut buf = [0; 256];
+
+        // TODO move timer interrupt init to helper fn
+        systick.set_reload(TIMER_INT_PERIOD_MS);
+        systick.clear_current();
+        systick.enable_interrupt();
+        systick.enable_counter();
 
         loop {
             target_rx
@@ -816,6 +840,12 @@ const APP: () = {
     #[task(binds = PIN_INT2, resources = [target_rts_int])]
     fn pinint2(context: pinint2::Context) {
         context.resources.target_rts_int.handle_interrupt();
+    }
+
+    #[task(binds = SysTick)]
+    fn syst(context: syst::Context) {
+        // TODO: check all dynamic input pin states
+        rprintln!("hi SysTick!");
     }
 
     #[task(binds = I2C0, resources = [i2c])]
