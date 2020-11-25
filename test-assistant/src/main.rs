@@ -16,7 +16,6 @@ use core::marker::PhantomData;
 use heapless::{
     FnvIndexMap,
     consts::U4,
-    Vec,
 };
 use lpc8xx_hal::{
     prelude::*,
@@ -159,8 +158,7 @@ const APP: () = {
         pinint3_int:  pin_interrupt::Int<'static, PININT3, PININT3_PIN, MRT3>,
         pinint3_idle: pin_interrupt::Idle<'static>,
 
-        dynamic_pins: Vec::<DynamicGpioPin<Dynamic>, U4>,
-        dynamic_input_pin_levels: FnvIndexMap::<u8, pin::Level, U4>,
+        dynamic_pins: FnvIndexMap::<u8, (DynamicGpioPin<Dynamic>, Option<pin::Level>), U4>,
 
         rts: GpioPin<PIO0_9, Dynamic>, // TODO make unidirectional again
         cts: GpioPin<PIO0_8, Dynamic>, // TODO make unidirectional again
@@ -236,19 +234,19 @@ const APP: () = {
         pinint3_int.enable_falling_edge();
 
         // all dynamic pins that are *not* interrupt-controlled
-        let mut dynamic_pins = Vec::<DynamicGpioPin<Dynamic>, U4>::new();
+        let mut dynamic_pins = FnvIndexMap::<u8,
+            (DynamicGpioPin<Dynamic>, Option<pin::Level>), U4>::new();
         // TODO add ALL the pins \o,
         let mut test_dyn_pin = p.pins.pio1_5.into_dynamic_pin_2(
             gpio.tokens.pio1_5,
             gpio::Level::Low
         );
         test_dyn_pin.switch_to_input();
-        let _ = dynamic_pins.push(test_dyn_pin);
+        let _ = dynamic_pins.insert(28, (test_dyn_pin, None));
 
         // the last known level of each pin currently configured as input that does not trigger interrupts
         // (i.e. are read periodically by timer interrupt)
         // TODO do we want to add a read timestamp?
-        // TODO could be merged with dynamic_pins? store readresult as Option<Level>; only set in Input mode
         let dynamic_input_pin_levels = FnvIndexMap::<u8, pin::Level, U4>::new();
 
         // Configure interrupt for pin connected to target's timer interrupt pin
@@ -489,7 +487,6 @@ const APP: () = {
             pinint3_pin,
 
             dynamic_pins,
-            dynamic_input_pin_levels,
 
             cts,
             rts,
@@ -515,7 +512,6 @@ const APP: () = {
             pinint3_pin,
             pinint0_pin,
             dynamic_pins,
-            dynamic_input_pin_levels,
             cts,
             rts,
         ]
@@ -535,7 +531,6 @@ const APP: () = {
         let pinint0_pin             = cx.resources.pinint0_pin;
         let pinint3_pin             = cx.resources.pinint3_pin;
         let dynamic_pins   = cx.resources.dynamic_pins;
-        let dynamic_input_pin_levels = cx.resources.dynamic_input_pin_levels;
         let cts            = cx.resources.cts;
         let rts            = cx.resources.rts;
 
@@ -865,13 +860,23 @@ const APP: () = {
         context.resources.target_rts_int.handle_interrupt();
     }
 
-    #[task(binds = SysTick, resources = [dynamic_pins, dynamic_input_pin_levels])]
+    #[task(binds = SysTick, resources = [dynamic_pins])]
     fn syst(context: syst::Context) {
-        for pin in context.resources.dynamic_pins {
-            if pin.direction_is_output() == false {
-                // TODO: don't just store the pin number here; store whole pin instance
-                // and then call is_high() on it and push result to dynamic_input_pin_levels
-                rprintln!("pin is input");
+        // TODO there's probably a race condition in here, re-think this
+
+        for tuple in context.resources.dynamic_pins.values_mut() {
+            // TODO de-uglify
+            match tuple {
+                (pin, level) => {
+                    if pin.direction_is_input() {
+                        let l = match pin.is_high() {
+                            true => pin::Level::High,
+                            false => pin::Level::Low,
+                        };
+                        *level = Some(l);
+                        rprintln!("input is {:?}", l);
+                    }
+                }
             }
         }
     }
