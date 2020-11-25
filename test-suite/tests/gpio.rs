@@ -60,22 +60,12 @@ fn assistant_red_led_should_be_toggleable_by_pin_direction() -> Result {
     let mut in_pin: InputPin<Assistant>; // we'll need this during the loop
 
     // RUN TEST
-    // TODO: figure out how to do this in a loop without move trouble
-    in_pin = out_pin.into_input_pin()?;
-    sleep(time::Duration::from_secs(2));
-    out_pin = in_pin.into_output_pin(Level::Low)?;
-    sleep(time::Duration::from_secs(2));
-
-    in_pin = out_pin.into_input_pin()?;
-    sleep(time::Duration::from_secs(2));
-    out_pin = in_pin.into_output_pin(Level::Low)?;
-    sleep(time::Duration::from_secs(2));
-
-    in_pin = out_pin.into_input_pin()?;
-    sleep(time::Duration::from_secs(2));
-    out_pin = in_pin.into_output_pin(Level::Low)?;
-
-    sleep(time::Duration::from_secs(2));
+    for _ in 0..5 {
+        in_pin = out_pin.into_input_pin()?;
+        sleep(time::Duration::from_secs(2));
+        out_pin = in_pin.into_output_pin(Level::Low)?;
+        sleep(time::Duration::from_secs(2));
+    }
 
     // ASSERT POSTCONDITION
     // 👀  manually assert that led is toggling on/off every 2 secs
