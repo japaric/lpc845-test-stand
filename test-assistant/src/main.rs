@@ -16,17 +16,16 @@ use core::marker::PhantomData;
 use heapless::{
     FnvIndexMap,
     consts::U4,
+    Vec,
 };
 use lpc8xx_hal::{
     prelude::*,
     Peripherals,
-    cortex_m::{
-        interrupt,
-        peripheral::SYST,
-    },
+    cortex_m::interrupt,
     gpio::{
         self,
         GpioPin,
+        DynamicGpioPin,
         direction::{Dynamic},
     },
     i2c,
@@ -112,7 +111,6 @@ use lpc845_messages::{
 // TODO: value picked for human reada/debuggability; adjust
 const TIMER_INT_PERIOD_MS : u32 = 100 * 6000; // fires every 100 milliseconds
 
-
 // TODO find a place to share them with t-s and t-t?
 /// some commonly used pin numbers
 const RTS_PIN_NUMBER : u8 = 18;
@@ -161,12 +159,14 @@ const APP: () = {
         pinint3_int:  pin_interrupt::Int<'static, PININT3, PININT3_PIN, MRT3>,
         pinint3_idle: pin_interrupt::Idle<'static>,
 
+        dynamic_pins: Vec::<DynamicGpioPin<Dynamic>, U4>,
+        dynamic_input_pin_levels: FnvIndexMap::<u8, pin::Level, U4>,
+
         rts: GpioPin<PIO0_9, Dynamic>, // TODO make unidirectional again
         cts: GpioPin<PIO0_8, Dynamic>, // TODO make unidirectional again
         pinint0_pin: GpioPin<PININT0_PIN, Dynamic>, // pin that triggers PININT0 interrupt
         pinint3_pin: GpioPin<PININT3_PIN, Dynamic>, // pin that triggers PININT3 interrupt
 
-        systick: SYST,
         i2c: i2c::Slave<I2C0, Enabled<PhantomData<IOSC>>, Enabled>,
         spi: SPI<SPI0, Enabled<spi::Slave>>,
     }
@@ -194,7 +194,7 @@ const APP: () = {
         // is the only place in this program where we call this method.
         let p = Peripherals::take().unwrap_or_else(|| unreachable!());
 
-        let systick = context.core.SYST;
+        let mut systick = context.core.SYST;
 
         let mut syscon = p.SYSCON.split();
         let     swm    = p.SWM.split();
@@ -203,6 +203,12 @@ const APP: () = {
         let     timers = p.MRT0.split(&mut syscon.handle);
 
         let mut swm_handle = swm.handle.enable(&mut syscon.handle);
+
+        // Initialize and enable timer interrupts
+        systick.set_reload(TIMER_INT_PERIOD_MS);
+        systick.clear_current();
+        systick.enable_interrupt();
+        systick.enable_counter();
 
         // Configure interrupts for pins that could be connected to target's GPIO pins
         // TODO more elegantly: make all pins dynamic, interruptable
@@ -228,6 +234,22 @@ const APP: () = {
             .select::<PININT3_PIN>(&mut syscon.handle);
         pinint3_int.enable_rising_edge();
         pinint3_int.enable_falling_edge();
+
+        // all dynamic pins that are *not* interrupt-controlled
+        let mut dynamic_pins = Vec::<DynamicGpioPin<Dynamic>, U4>::new();
+        // TODO add ALL the pins \o,
+        let mut test_dyn_pin = p.pins.pio1_5.into_dynamic_pin_2(
+            gpio.tokens.pio1_5,
+            gpio::Level::Low
+        );
+        test_dyn_pin.switch_to_input();
+        let _ = dynamic_pins.push(test_dyn_pin);
+
+        // the last known level of each pin currently configured as input that does not trigger interrupts
+        // (i.e. are read periodically by timer interrupt)
+        // TODO do we want to add a read timestamp?
+        // TODO could be merged with dynamic_pins? store readresult as Option<Level>; only set in Input mode
+        let dynamic_input_pin_levels = FnvIndexMap::<u8, pin::Level, U4>::new();
 
         // Configure interrupt for pin connected to target's timer interrupt pin
         let _target_timer = p.pins.pio1_1.into_input_pin(gpio.tokens.pio1_1);
@@ -465,10 +487,13 @@ const APP: () = {
 
             pinint0_pin,
             pinint3_pin,
+
+            dynamic_pins,
+            dynamic_input_pin_levels,
+
             cts,
             rts,
 
-            systick,
             i2c: i2c.slave,
             spi,
         }
@@ -489,9 +514,10 @@ const APP: () = {
             target_rts_idle,
             pinint3_pin,
             pinint0_pin,
+            dynamic_pins,
+            dynamic_input_pin_levels,
             cts,
             rts,
-            systick
         ]
     )]
     fn idle(cx: idle::Context) -> ! {
@@ -508,20 +534,17 @@ const APP: () = {
         let target_rts_idle= cx.resources.target_rts_idle;
         let pinint0_pin             = cx.resources.pinint0_pin;
         let pinint3_pin             = cx.resources.pinint3_pin;
+        let dynamic_pins   = cx.resources.dynamic_pins;
+        let dynamic_input_pin_levels = cx.resources.dynamic_input_pin_levels;
         let cts            = cx.resources.cts;
         let rts            = cx.resources.rts;
-        let systick        = cx.resources.systick;
 
         let mut pins = FnvIndexMap::<_, _, U4>::new();
-        let mut dynamic_pins = FnvIndexMap::<_, _, U4>::new();
+
+        // TODO pick name that is less easy to confuse with `dynamic_pins`
+        let mut dynamic_int_pins = FnvIndexMap::<_, _, U4>::new();
 
         let mut buf = [0; 256];
-
-        // TODO move timer interrupt init to helper fn
-        systick.set_reload(TIMER_INT_PERIOD_MS);
-        systick.clear_current();
-        systick.enable_interrupt();
-        systick.enable_counter();
 
         loop {
             target_rx
@@ -720,7 +743,7 @@ const APP: () = {
                             pin::ReadLevel { pin }
                         ) => {
                             rprintln!("READ DYNAMIC PIN command for {:?}", pin);
-                            rprintln!("dynamic_pins: {:?}", dynamic_pins);
+                            rprintln!("dynamic_int_pins: {:?}", dynamic_int_pins);
 
                             // todo nicer and more generic once we resolve the Pin Type Conundrum
                             let pin_is_input: bool = match pin {
@@ -735,7 +758,7 @@ const APP: () = {
                                     // TODO: really applicable to all?
                                     let pin_number = get_pin_number(pin);
 
-                                    dynamic_pins
+                                    dynamic_int_pins
                                     .get(&(pin_number as usize))
                                     .map(|&(level, period_ms)| {
                                         pin::ReadLevelResult {
@@ -770,9 +793,9 @@ const APP: () = {
             host_rx.clear_buf();
 
             // TODO only do this for pins that are currently in input direction?
-            handle_pin_interrupt_dynamic(pinint0_idle, PININT0_DYN_PIN, &mut dynamic_pins);
-            handle_pin_interrupt_dynamic(pinint3_idle, PININT3_DYN_PIN, &mut dynamic_pins);
-            handle_pin_interrupt_dynamic(target_rts_idle, DynamicPin::GPIO(RTS_PIN_NUMBER), &mut dynamic_pins);
+            handle_pin_interrupt_dynamic(pinint0_idle, PININT0_DYN_PIN, &mut dynamic_int_pins);
+            handle_pin_interrupt_dynamic(pinint3_idle, PININT3_DYN_PIN, &mut dynamic_int_pins);
+            handle_pin_interrupt_dynamic(target_rts_idle, DynamicPin::GPIO(RTS_PIN_NUMBER), &mut dynamic_int_pins);
             handle_pin_interrupt(target_timer_idle, InputPin::TargetTimer, &mut pins);
 
             // We need this critical section to protect against a race
@@ -842,10 +865,15 @@ const APP: () = {
         context.resources.target_rts_int.handle_interrupt();
     }
 
-    #[task(binds = SysTick)]
+    #[task(binds = SysTick, resources = [dynamic_pins, dynamic_input_pin_levels])]
     fn syst(context: syst::Context) {
-        // TODO: check all dynamic input pin states
-        rprintln!("hi SysTick!");
+        for pin in context.resources.dynamic_pins {
+            if pin.direction_is_output() == false {
+                // TODO: don't just store the pin number here; store whole pin instance
+                // and then call is_high() on it and push result to dynamic_input_pin_levels
+                rprintln!("pin is input");
+            }
+        }
     }
 
     #[task(binds = I2C0, resources = [i2c])]
@@ -913,6 +941,7 @@ const APP: () = {
 fn handle_pin_interrupt_dynamic(
     int:  &mut pin_interrupt::Idle,
     pin:  DynamicPin,
+    // TODO: why are we even using usize for index if values never exceed u0?
     pins: &mut FnvIndexMap<usize, (pin::Level, Option<u32>), U4>,
 ) {
     while let Some(event) = int.next() {
@@ -932,8 +961,7 @@ fn handle_pin_interrupt_dynamic(
     }
 }
 
-
-// TODO get rid of this when we make all pins dynamic
+// TODO merge w handle_pin_interrupt_dynamic / make more generic
 fn handle_pin_interrupt(
     int:  &mut pin_interrupt::Idle,
     pin:  InputPin,
