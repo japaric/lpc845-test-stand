@@ -14,6 +14,22 @@ const RED_LED_PIN: PinNumber = 29;
 const GRN_LED_PIN: PinNumber = 31;
 
 #[test]
+fn xoxo() -> Result {
+    // SETUP
+    let mut test_stand = TestStand::new()?;
+    sleep(time::Duration::from_secs(6));
+
+    loop {
+        // TEST & ASSERT POSTCONDITION
+        test_stand.target.set_pin_low()?;
+        sleep(time::Duration::from_secs(5));
+
+        //test_stand.target.set_pin_high()?;
+        sleep(time::Duration::from_secs(5));
+    }
+}
+
+#[test]
 fn target_should_set_pin_level() -> Result {
     // SETUP
     let mut test_stand = TestStand::new()?;
