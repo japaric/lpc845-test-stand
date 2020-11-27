@@ -331,20 +331,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "lpc845-test-target"
-version = "0.1.0"
-dependencies = [
- "cortex-m-rtic",
- "firmware-lib",
- "heapless",
- "lpc845-messages",
- "lpc8xx-hal",
- "panic-rtt-target",
- "rtt-target",
- "void",
-]
-
-[[package]]
 name = "lpc8xx-hal"
 version = "0.8.2"
 dependencies = [
@@ -655,6 +641,20 @@ checksum = "a3e12110bc539e657a646068aaf5eb5b63af9d0c1f7b29c97113fad80e15f035"
 dependencies = [
  "arc-swap",
  "libc",
+]
+
+[[package]]
+name = "simple-unit-under-test"
+version = "0.1.0"
+dependencies = [
+ "cortex-m-rtic",
+ "firmware-lib",
+ "heapless",
+ "lpc845-messages",
+ "lpc8xx-hal",
+ "panic-rtt-target",
+ "rtt-target",
+ "void",
 ]
 
 [[package]]

@@ -8,15 +8,24 @@ use lpc8xx_hal::{
     Peripherals,
 };
 
+/// Simple "unit under test" example app for a test target.
+/// The device behaves as follows
+///
+/// ----------
+/// |         |
+/// |     [PIN 31] <~~~ in ~~~   Low/High signal
+/// |      ↓  |
+/// |     [PIN 30] ~~~ out ~~~>  ¬signal read at PIN 31
+/// |         |
+/// |     [PIN 29] ~~~ out ~~~>  autonomously toggles Low/High
+/// -----------
+
 #[entry]
 fn main() -> ! {
+    const PIN_READ_DELAY : u16 = 1_000_u16;
     rtt_target::rtt_init_print!();
 
-    // Get access to the device's peripherals. Since only one instance of this
-    // struct can exist, the call to `take` returns an `Option<Peripherals>`.
-    // If we tried to call the method a second time, it would return `None`, but
-    // we're only calling it the one time here, so we can safely `unwrap` the
-    // `Option` without causing a panic.
+    // Get access to the device's peripherals.
     let cp = CorePeripherals::take().unwrap();
     let p = Peripherals::take().unwrap();
 
@@ -27,18 +36,32 @@ fn main() -> ! {
         p.GPIO.enable(&mut syscon.handle)
     };
 
-    // Select pin for LED (blue LED)
-    let (led, token) = (p.pins.pio1_2, gpio.tokens.pio1_2);
+    // Select pins we want to use
+    let (pio1_0, pio1_0_token) = (p.pins.pio1_0, gpio.tokens.pio1_0); // green led
+    let (pio1_1, pio1_1_token) = (p.pins.pio1_1, gpio.tokens.pio1_1); // blue  led
+    let (pio1_2, pio1_2_token) = (p.pins.pio1_2, gpio.tokens.pio1_2); // red   led
 
-    // Configure the LED pin. The API tracks the state of pins at compile time,
-    // to prevent any mistakes.
-    let mut led = led.into_output_pin(token, Level::Low);
+    // Configure the pin directions
+    let pin_31 = pio1_0.into_input_pin(pio1_0_token);
+    let mut pin_30 = pio1_1.into_output_pin(pio1_1_token, Level::High); // blue led off
+    let mut pin_29 = pio1_2.into_output_pin(pio1_2_token, Level::Low);  // red led on
 
-    // Blink the LED using the systick with the delay traits
+    // check / update our pins every PIN_READ_DELAY ms
+    // (we're polling instead of listening on interrupts here to keep things simple)
     loop {
-        delay.delay_ms(1_000_u16);
-        led.set_high();
-        delay.delay_ms(1_000_u16);
-        led.set_low();
+        // pin 30 always outputs the inverse of the signal that's read on pin 31
+        match pin_31.is_low() {
+            true  => pin_30.set_high(),
+            false => pin_30.set_low(),
+        }
+
+        // pin 29 gets toggled periodically
+        match pin_29.is_set_high() {
+            true  => pin_29.set_low(),
+            false => pin_29.set_high(),
+        }
+
+        // wait until the next turn
+        delay.delay_ms(PIN_READ_DELAY);
     }
 }
