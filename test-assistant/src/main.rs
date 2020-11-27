@@ -226,9 +226,6 @@ const APP: () = {
             gpio::Level::High,
         );
 
-        // TODO for debugging; remove!
-        pinint3_pin.switch_to_output(gpio::Level::Low);
-
         let mut pinint3_int = pinint
             .interrupts
             .pinint3
@@ -508,7 +505,7 @@ const APP: () = {
             pinint3_idle,
             target_timer_idle,
             target_rts_idle,
-            //pinint3_pin,
+            pinint3_pin,
             pinint0_pin,
             dynamic_pins,
             cts,
@@ -528,7 +525,7 @@ const APP: () = {
         let pinint3_idle   = cx.resources.pinint3_idle;
         let target_rts_idle= cx.resources.target_rts_idle;
         let pinint0_pin             = cx.resources.pinint0_pin;
-        //let pinint3_pin             = cx.resources.pinint3_pin;
+        let pinint3_pin             = cx.resources.pinint3_pin;
         let dynamic_pins   = cx.resources.dynamic_pins;
         let cts            = cx.resources.cts;
         let rts            = cx.resources.rts;
@@ -609,7 +606,7 @@ const APP: () = {
                         ) => {
                             // todo nicer and more generic once we resolve the Pin Type Conundrum
                             let pin_is_output: bool = match pin {
-                                //PININT3_DYN_PIN => pinint3_pin.direction_is_output(),
+                                PININT3_DYN_PIN => pinint3_pin.direction_is_output(),
                                 PININT0_DYN_PIN => pinint0_pin.direction_is_output(),
                                 DynamicPin::GPIO(CTS_PIN_NUMBER) => cts.direction_is_output(),
                                 _ => false
@@ -621,7 +618,7 @@ const APP: () = {
                                     pin::Level::High => {
                                         rprintln!("dynamic HIGH for {:?}", pin);
                                         match pin {
-                                            //PININT3_DYN_PIN => pinint3_pin.set_high(),
+                                            PININT3_DYN_PIN => pinint3_pin.set_high(),
                                             PININT0_DYN_PIN => pinint0_pin.set_high(),
                                             DynamicPin::GPIO(RTS_PIN_NUMBER) => cts.set_high(),
                                             _ => todo!(),
@@ -630,7 +627,7 @@ const APP: () = {
                                     pin::Level::Low => {
                                         rprintln!("dynamic LOW for {:?}", pin);
                                         match pin {
-                                            //PININT3_DYN_PIN => pinint3_pin.set_low(),
+                                            PININT3_DYN_PIN => pinint3_pin.set_low(),
                                             PININT0_DYN_PIN => pinint0_pin.set_low(),
                                             DynamicPin::GPIO(RTS_PIN_NUMBER) => cts.set_low(),
                                             _ => todo!(),
@@ -679,7 +676,7 @@ const APP: () = {
                             // fn get_gpio_from_pin_number() -> Option<GpioPin<??, Dynamic>>
                             // (I'll call this the in Type Conundrum for now)
                             match pin {
-                                //PININT3_DYN_PIN => pinint3_pin.switch_to_input(),
+                                PININT3_DYN_PIN => pinint3_pin.switch_to_input(),
                                 PININT0_DYN_PIN => pinint0_pin.switch_to_input(),
                                 DynamicPin::GPIO(CTS_PIN_NUMBER) => {
                                     // TODO proper error handling
@@ -710,7 +707,7 @@ const APP: () = {
 
                             // todo nicer and more generic once we start enabling ALL the pins
                             match pin {
-                                //PININT3_DYN_PIN => pinint3_pin.switch_to_output(gpio_level),
+                                PININT3_DYN_PIN => pinint3_pin.switch_to_output(gpio_level),
                                 PININT0_DYN_PIN => pinint0_pin.switch_to_output(gpio_level),
                                 DynamicPin::GPIO(CTS_PIN_NUMBER) => cts.switch_to_output(gpio_level),
                                 DynamicPin::GPIO(RTS_PIN_NUMBER) => {
@@ -741,7 +738,7 @@ const APP: () = {
 
                             // todo nicer and more generic once we resolve the Pin Type Conundrum
                             let pin_is_input: bool = match pin {
-                                //PININT3_DYN_PIN => pinint3_pin.direction_is_input(),
+                                PININT3_DYN_PIN => pinint3_pin.direction_is_input(),
                                 PININT0_DYN_PIN => pinint0_pin.direction_is_input(),
                                 DynamicPin::GPIO(RTS_PIN_NUMBER) => rts.direction_is_input(),
                                 _ => false
@@ -859,15 +856,9 @@ const APP: () = {
         context.resources.target_rts_int.handle_interrupt();
     }
 
-    #[task(binds = SysTick, resources = [dynamic_pins, pinint3_pin])]
+    #[task(binds = SysTick, resources = [dynamic_pins])]
     fn syst(context: syst::Context) {
         // TODO there's probably a race condition in here, re-think this
-
-        // TODO rm, test code
-        match context.resources.pinint3_pin.is_high() {
-            true => rprintln!("xoxo h"),
-            false => rprintln!("xoxo l"),
-        };
 
         for tuple in context.resources.dynamic_pins.values_mut() {
             // TODO de-uglify
@@ -877,7 +868,7 @@ const APP: () = {
                         let l = match pin.is_high() {
                             // TODO rm debug oputput
                             true => {
-                                rprintln!("h");
+                                //rprintln!("h");
                                 pin::Level::High
                             },
                             false => {
