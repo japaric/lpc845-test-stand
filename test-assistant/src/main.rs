@@ -241,7 +241,7 @@ const APP: () = {
             gpio.tokens.pio0_16,
             gpio::Level::Low
         );
-        test_dyn_pin.switch_to_input();
+        test_dyn_pin.switch_to_input(); // TODO note that this is glue and duct tape
         let _ = dynamic_pins.insert(1, (test_dyn_pin, None));
 
         // Configure interrupt for pin connected to target's timer interrupt pin
@@ -678,6 +678,12 @@ const APP: () = {
                             match pin {
                                 PININT3_DYN_PIN => pinint3_pin.switch_to_input(),
                                 PININT0_DYN_PIN => pinint0_pin.switch_to_input(),
+                                // TODO don't hardcode, check dynamic_pins
+                                DynamicPin::GPIO(1) => {
+                                    // Ignore for now, we've hardcoded this pin as input
+                                    // TODO fix this (I think the problem is that we can't just pass
+                                    // an IndexMap as a resource? that'd also explain the int/idle split)
+                                },
                                 DynamicPin::GPIO(CTS_PIN_NUMBER) => {
                                     // TODO proper error handling
                                     rprintln!("CTS pin is never Input");
@@ -740,6 +746,10 @@ const APP: () = {
                             let pin_is_input: bool = match pin {
                                 PININT3_DYN_PIN => pinint3_pin.direction_is_input(),
                                 PININT0_DYN_PIN => pinint0_pin.direction_is_input(),
+                                DynamicPin::GPIO(1) => {
+                                    // TODO don't hardcode this! (see discussion in SetDirection)
+                                    true
+                                },
                                 DynamicPin::GPIO(RTS_PIN_NUMBER) => rts.direction_is_input(),
                                 _ => false
                             };
@@ -868,7 +878,7 @@ const APP: () = {
                         let l = match pin.is_high() {
                             // TODO rm debug oputput
                             true => {
-                                //rprintln!("h");
+                                rprintln!("h");
                                 pin::Level::High
                             },
                             false => {
