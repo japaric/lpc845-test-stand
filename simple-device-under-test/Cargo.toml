@@ -1,5 +1,5 @@
 [package]
-name    = "simple-unit-under-test"
+name    = "simple-device-under-test"
 version = "0.1.0"
 authors = ["Lotte Steenbrink <lotte.steenbrink@ferrous-systems.com>"]
 edition = "2018"

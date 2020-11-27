@@ -644,7 +644,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "simple-unit-under-test"
+name = "simple-device-under-test"
 version = "0.1.0"
 dependencies = [
  "cortex-m-rtic",
