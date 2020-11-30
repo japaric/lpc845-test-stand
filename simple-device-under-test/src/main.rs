@@ -7,6 +7,7 @@ use lpc8xx_hal::{
     cortex_m_rt::entry, delay::Delay, gpio::Level, prelude::*, CorePeripherals,
     Peripherals,
 };
+#[allow(unused_imports)]
 use rtt_target::rprintln; // for debug messages
 
 /// Simple example app for a test target.

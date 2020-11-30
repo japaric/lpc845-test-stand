@@ -221,7 +221,7 @@ const APP: () = {
         pinint0_int.enable_rising_edge();
         pinint0_int.enable_falling_edge();
 
-        let mut pinint3_pin = p.pins.pio1_2.into_dynamic_pin(
+        let pinint3_pin = p.pins.pio1_2.into_dynamic_pin(
             gpio.tokens.pio1_2,
             gpio::Level::High,
         );
@@ -526,7 +526,7 @@ const APP: () = {
         let target_rts_idle= cx.resources.target_rts_idle;
         let pinint0_pin             = cx.resources.pinint0_pin;
         let pinint3_pin             = cx.resources.pinint3_pin;
-        let dynamic_pins   = cx.resources.dynamic_pins;
+        let _dynamic_pins   = cx.resources.dynamic_pins;
         let cts            = cx.resources.cts;
         let rts            = cx.resources.rts;
 
@@ -899,9 +899,9 @@ const APP: () = {
         for tuple in context.resources.dynamic_pins.values_mut() {
             // TODO de-uglify
             match tuple {
-                (pin, level) => {
+                (pin, _level) => {
                     if pin.direction_is_input() {
-                        let l = match pin.is_high() {
+                        let _l = match pin.is_high() {
                             // TODO rm debug oputput
                             true => {
                                 //rprintln!("h");

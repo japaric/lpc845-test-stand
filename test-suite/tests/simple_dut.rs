@@ -21,7 +21,7 @@ use lpc845_test_suite::{Result, TestStand};
 #[test]
 fn dut_pin_31_should_output_inverse_signal_on_pin_29_within_1_second() -> Result {
     // SETUP
-    let mut test_stand = TestStand::new()?;
+    let test_stand = TestStand::new()?;
     let mut test_assistant_pin_31 = test_stand
         .assistant
         // output pin because we're feeding signals into the device under test
@@ -49,7 +49,7 @@ fn dut_pin_31_should_output_inverse_signal_on_pin_29_within_1_second() -> Result
 #[test]
 fn dut_pin_1_should_toggle_periodically() -> Result {
     // SETUP
-    let mut test_stand = TestStand::new()?;
+    let test_stand = TestStand::new()?;
 
     let mut test_assistant_pin_30 = test_stand
         .assistant
@@ -57,7 +57,6 @@ fn dut_pin_1_should_toggle_periodically() -> Result {
         .create_gpio_input_pin(30)?;
 
     // RUN TEST
-    // TODO less fast and loose
     while test_assistant_pin_30.is_low() ? {
         sleep(time::Duration::from_millis(300));
     }
