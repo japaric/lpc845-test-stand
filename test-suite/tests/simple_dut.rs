@@ -1,4 +1,4 @@
-//! Test Suite to demonstrate how to check if the simple-deice-under-test firmware
+//! Test Suite to demonstrate how to check if the simple-device-under-test firmware
 //! behaves as expected.
 //!
 //! This test suite communicates with hardware.
