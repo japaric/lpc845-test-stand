@@ -18,7 +18,7 @@ use rtt_target::rprintln; // for debug messages
 /// |      ↓  |
 /// |     [PIN 29] ~~~ out ~~~>  ¬signal read at PIN 31
 /// |         |
-/// |     [PIN 1 ] ~~~ out ~~~>  ¬signal read at PIN 31
+/// |     [PIN 30 ] ~~~ out ~~~>  ¬signal read at PIN 31
 /// |         |
 /// -----------
 
@@ -41,12 +41,14 @@ fn main() -> ! {
     // Select pins we want to use
     let (pio1_0, pio1_0_token) = (p.pins.pio1_0, gpio.tokens.pio1_0); // green led
     let (pio1_2, pio1_2_token) = (p.pins.pio1_2, gpio.tokens.pio1_2); // red   led
-    let (pio0_16, pio0_16_token) = (p.pins.pio0_16, gpio.tokens.pio0_16);
+    //let (pio0_16, pio0_16_token) = (p.pins.pio0_16, gpio.tokens.pio0_16); TODO rm if tt works
+    let (pio1_1, pio1_1_token) = (p.pins.pio1_1, gpio.tokens.pio1_1); // blue led
 
     // Configure the pin directions
     let pin_31 = pio1_0.into_input_pin(pio1_0_token);
     let mut pin_29 = pio1_2.into_output_pin(pio1_2_token, Level::High); // red led off
-    let mut pin_1 = pio0_16.into_output_pin(pio0_16_token, Level::High);
+    //let mut pin_1 = pio0_16.into_output_pin(pio0_16_token, Level::High); TODO rm if tt works
+    let mut pin_30 = pio1_1.into_output_pin(pio1_1_token, Level::High);
 
     // check / update our pins every PIN_READ_DELAY ms
     // (we're polling instead of listening on interrupts here to keep things simple)
@@ -58,9 +60,9 @@ fn main() -> ! {
         }
 
         // pin 1 gets toggled periodically
-        match pin_1.is_set_high() {
-            true  => pin_1.set_low(),
-            false => pin_1.set_high(),
+        match pin_30.is_set_high() {
+            true  => pin_30.set_low(),
+            false => pin_30.set_high(),
         }
 
         // wait until the next turn

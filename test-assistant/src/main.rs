@@ -691,7 +691,11 @@ const APP: () = {
                                 },
                                 DynamicPin::GPIO(RTS_PIN_NUMBER) => {
                                     rts.switch_to_input()
-                                }
+                                },
+                                DynamicPin::GPIO(30) => {
+                                    // Ignore for now, we've hardcoded this pin as input
+                                    // TODO fix this
+                                },
                                 _ => todo!(),
                             };
                             Ok(())
@@ -740,13 +744,17 @@ const APP: () = {
                             pin::ReadLevel { pin }
                         ) => {
                             rprintln!("READ DYNAMIC PIN command for {:?}", pin);
-                            rprintln!("dynamic_int_pins: {:?}", dynamic_int_pins);
+                            //rprintln!("dynamic_int_pins: {:?}", dynamic_int_pins);
 
                             // todo nicer and more generic once we resolve the Pin Type Conundrum
                             let pin_is_input: bool = match pin {
                                 PININT3_DYN_PIN => pinint3_pin.direction_is_input(),
                                 PININT0_DYN_PIN => pinint0_pin.direction_is_input(),
                                 DynamicPin::GPIO(1) => {
+                                    // TODO don't hardcode this! (see discussion in SetDirection)
+                                    true
+                                },
+                                DynamicPin::GPIO(30) => {
                                     // TODO don't hardcode this! (see discussion in SetDirection)
                                     true
                                 },
@@ -759,15 +767,33 @@ const APP: () = {
                                     // TODO: really applicable to all?
                                     let pin_number = get_pin_number(pin);
 
-                                    dynamic_int_pins
-                                    .get(&(pin_number as usize))
-                                    .map(|&(level, period_ms)| {
-                                        pin::ReadLevelResult {
-                                            pin,
-                                            level,
-                                            period_ms,
+                                    match pin_number {
+                                        30 => {
+                                            // is target timer; not dynamic yet
+                                            // TODO don't hardcode this!
+                                            pins
+                                                .get(&(InputPin::TargetTimer as usize))
+                                                .map(|&(level, period_ms)| {
+                                                    pin::ReadLevelResult {
+                                                        pin,
+                                                        level,
+                                                        period_ms,
+                                                    }
+                                                })
                                         }
-                                    })
+                                        _ => {
+                                            rprintln!("dynamic_int_pins: {:?}", dynamic_int_pins);
+                                            dynamic_int_pins
+                                            .get(&(pin_number as usize))
+                                            .map(|&(level, period_ms)| {
+                                                pin::ReadLevelResult {
+                                                    pin,
+                                                    level,
+                                                    period_ms,
+                                                }
+                                            })
+                                        }
+                                    }
                                 }
                                 false => {
                                     rprintln!("Warning: Can't read pin #{} since it is configured as output.",
@@ -878,11 +904,11 @@ const APP: () = {
                         let l = match pin.is_high() {
                             // TODO rm debug oputput
                             true => {
-                                rprintln!("h");
+                                //rprintln!("h");
                                 pin::Level::High
                             },
                             false => {
-                                rprintln!("l");
+                                //rprintln!("l");
                                 pin::Level::Low
                             },
                         };
