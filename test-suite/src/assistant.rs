@@ -95,7 +95,6 @@ impl AssistantInterface<Assistant> {
         Err(AssistantPinOperationError::AssistantLockedError)
     }
 
-
     /// Retrieve an OutputPin instance that we can use to (re)configure the test-assistant's pin with
     /// number `pin_number` at test runtime.
     /// If this function returns without Error, the pin's voltage has been set to `level`.
@@ -131,6 +130,160 @@ impl AssistantInterface<Assistant> {
             }
         }
         Err(AssistantPinOperationError::AssistantLockedError)
+    }
+
+    pub fn measure_gpio_period(
+        &mut self,
+        samples: u32,
+        timeout: Duration,
+    ) -> Result<GpioPeriodMeasurement, AssistantPinReadError> {
+        let lock = self.real_assistant.try_write();
+        // note to self: loop until we get the lock?
+        if let Ok(mut assistant) = lock {
+            return assistant.measure_gpio_period(samples, timeout);
+        }
+
+        // TODO more helpful error
+        Err(AssistantPinReadError(ReadLevelError::Timeout))
+    }
+
+    /// Wait to receive the provided data via USART
+    ///
+    /// Returns the receive buffer, once the data was received. Returns an
+    /// error, if it times out before that, or an I/O error occurs.
+    pub fn receive_from_target_usart(
+        &mut self,
+        data: &[u8],
+        timeout: Duration,
+    ) -> Result<Vec<u8>, AssistantUsartWaitError> {
+        let lock = self.real_assistant.try_write();
+        // note to self: loop until we get the lock?
+        if let Ok(mut assistant) = lock {
+            return assistant.receive_from_target_usart(data, timeout);
+        }
+
+        // TODO more helpful error
+        Err(AssistantUsartWaitError::Timeout)
+    }
+
+    /// Wait to receive the provided data via USART in synchronous mode
+    ///
+    /// Returns the receive buffer, once the data was received. Returns an
+    /// error, if it times out before that, or an I/O error occurs.
+    pub fn receive_from_target_usart_sync(
+        &mut self,
+        data: &[u8],
+        timeout: Duration,
+    ) -> Result<Vec<u8>, AssistantUsartWaitError> {
+        let lock = self.real_assistant.try_write();
+        // note to self: loop until we get the lock?
+        if let Ok(mut assistant) = lock {
+            return assistant.receive_from_target_usart(data, timeout);
+        }
+
+        // TODO more helpful error
+        Err(AssistantUsartWaitError::Timeout)
+    }
+
+    /// Instruct assistant to send this message to the target via USART
+    pub fn send_to_target_usart(&mut self, data: &[u8]) -> Result<(), AssistantUsartSendError> {
+        let lock = self.real_assistant.try_write();
+        // note to self: loop until we get the lock?
+        if let Ok(mut assistant) = lock {
+            return assistant.send_to_target_usart(data);
+        }
+
+        // TODO more helpful error
+        Err(AssistantUsartSendError(ConnSendError(
+            host_lib::error::Error::AssistantLockedError,
+        )))
+    }
+
+    /// Instruct assistant to send this message to the target's USART/DMA
+    pub fn send_to_target_usart_dma(&mut self, data: &[u8]) -> Result<(), AssistantUsartSendError> {
+        let lock = self.real_assistant.try_write();
+        // note to self: loop until we get the lock?
+        if let Ok(mut assistant) = lock {
+            return assistant.send_to_target_usart_dma(data);
+        }
+
+        // TODO more helpful error
+        Err(AssistantUsartSendError(ConnSendError(
+            host_lib::error::Error::AssistantLockedError,
+        )))
+    }
+
+    /// Instruct assistant to send this message to the target's sync USART
+    pub fn send_to_target_usart_sync(
+        &mut self,
+        data: &[u8],
+    ) -> Result<(), AssistantUsartSendError> {
+        let lock = self.real_assistant.try_write();
+        // note to self: loop until we get the lock?
+        if let Ok(mut assistant) = lock {
+            return assistant.send_to_target_usart_sync(data);
+        }
+
+        // TODO more helpful error
+        Err(AssistantUsartSendError(ConnSendError(
+            host_lib::error::Error::AssistantLockedError,
+        )))
+    }
+
+    /// Instruct the assistant to disable CTS
+    pub fn disable_cts(&mut self) -> Result<(), AssistantSetPinHighError> {
+        let lock = self.real_assistant.try_write();
+        // note to self: loop until we get the lock?
+        if let Ok(mut assistant) = lock {
+            return assistant.disable_cts();
+        }
+
+        // TODO more helpful error
+        Err(AssistantSetPinHighError(ConnSendError(
+            host_lib::error::Error::AssistantLockedError,
+        )))
+    }
+
+    /// Wait for RTS signal to be enabled
+    pub fn wait_for_rts(&mut self) -> Result<bool, AssistantPinReadError> {
+        let lock = self.real_assistant.try_write();
+        // note to self: loop until we get the lock?
+        if let Ok(mut assistant) = lock {
+            return assistant.wait_for_rts();
+        }
+        // TODO more helpful error
+        Err(AssistantPinReadError(ReadLevelError::Timeout))
+    }
+
+    /// Expect to hear nothing from the target within the given timeout period
+    pub fn expect_nothing_from_target(
+        &mut self,
+        timeout: Duration,
+    ) -> Result<(), AssistantExpectNothingError> {
+        let lock = self.real_assistant.try_write();
+        // note to self: loop until we get the lock?
+        if let Ok(mut assistant) = lock {
+            return assistant.expect_nothing_from_target(timeout);
+        }
+
+        // TODO more helpful error
+        Err(AssistantExpectNothingError::Receive(ConnReceiveError(
+            host_lib::error::Error::AssistantLockedError,
+        )))
+    }
+
+    /// Instruct the assistant to enable CTS
+    pub fn enable_cts(&mut self) -> Result<(), AssistantSetPinLowError> {
+        let lock = self.real_assistant.try_write();
+        // note to self: loop until we get the lock?
+        if let Ok(mut assistant) = lock {
+            return assistant.enable_cts();
+        }
+
+        // TODO more helpful error
+        Err(AssistantSetPinLowError(ConnSendError(
+            host_lib::error::Error::AssistantLockedError,
+        )))
     }
 }
 
@@ -378,30 +531,6 @@ impl Assistant {
             .map_err(|err| AssistantUsartSendError(err))
     }
 
-    /// Wait to receive the provided data via USART
-    ///
-    /// Returns the receive buffer, once the data was received. Returns an
-    /// error, if it times out before that, or an I/O error occurs.
-    pub fn receive_from_target_usart(
-        &mut self,
-        data: &[u8],
-        timeout: Duration,
-    ) -> Result<Vec<u8>, AssistantUsartWaitError> {
-        self.receive_from_target_usart_inner(data, timeout, UsartMode::Regular)
-    }
-
-    /// Wait to receive the provided data via USART in synchronous mode
-    ///
-    /// Returns the receive buffer, once the data was received. Returns an
-    /// error, if it times out before that, or an I/O error occurs.
-    pub fn receive_from_target_usart_sync(
-        &mut self,
-        data: &[u8],
-        timeout: Duration,
-    ) -> Result<Vec<u8>, AssistantUsartWaitError> {
-        self.receive_from_target_usart_inner(data, timeout, UsartMode::Sync)
-    }
-
     pub fn receive_from_target_usart_inner(
         &mut self,
         data: &[u8],
@@ -437,6 +566,30 @@ impl Assistant {
                 }
             }
         }
+    }
+
+    /// Wait to receive the provided data via USART
+    ///
+    /// Returns the receive buffer, once the data was received. Returns an
+    /// error, if it times out before that, or an I/O error occurs.
+    pub fn receive_from_target_usart(
+        &mut self,
+        data: &[u8],
+        timeout: Duration,
+    ) -> Result<Vec<u8>, AssistantUsartWaitError> {
+        self.receive_from_target_usart_inner(data, timeout, UsartMode::Regular)
+    }
+
+    /// Wait to receive the provided data via USART in synchronous mode
+    ///
+    /// Returns the receive buffer, once the data was received. Returns an
+    /// error, if it times out before that, or an I/O error occurs.
+    pub fn receive_from_target_usart_sync(
+        &mut self,
+        data: &[u8],
+        timeout: Duration,
+    ) -> Result<Vec<u8>, AssistantUsartWaitError> {
+        self.receive_from_target_usart_inner(data, timeout, UsartMode::Sync)
     }
 
     /// Measures the period of changes triggered by the target Timer interrupt signal
