@@ -18,7 +18,7 @@ use rtt_target::rprintln; // for debug messages
 /// |      ↓  |
 /// |     [PIN 29] ~~~ out ~~~>  ¬signal read at PIN 31
 /// |         |
-/// |     [PIN 30 ] ~~~ out ~~~>  ¬signal read at PIN 31
+/// |     [PIN 30] ~~~ out ~~~>  ¬signal read at PIN 31
 /// |         |
 /// -----------
 

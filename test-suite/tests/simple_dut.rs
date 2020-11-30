@@ -2,7 +2,15 @@
 //! behaves as expected.
 //!
 //! This test suite communicates with hardware.
-//! TODO add wiring instructions
+//!
+//! wiring:
+//!
+//! Target Pin | Assistant Pin | Note
+//! -----------------------------------------------------------------------
+//!         20 |            20 | GND (common ground)
+//!         29 |            29 | GPIO: Target Out, Assistant In
+//!         30 |            30 | GPIO: Target Out, Assistant In
+//!         31 |            31 | GPIO: Target In, Assistant Out
 
 use std::thread::sleep;
 use std::time;
