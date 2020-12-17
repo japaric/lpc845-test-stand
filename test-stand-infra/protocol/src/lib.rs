@@ -153,3 +153,12 @@ pub enum DynamicPin {
     GPIO(PinNumber),
     UART, // TODO this is just a dummy, adjust to add info needed for uart
 }
+
+impl DynamicPin {
+    pub fn get_pin_number(&self) -> Option<PinNumber> {
+        match self {
+            DynamicPin::GPIO(number) => { Some(*number) }
+            DynamicPin::UART => { None }
+        }
+    }
+}

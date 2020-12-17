@@ -232,20 +232,18 @@ const APP: () = {
         // TODO add ALL the pins \o,
         let test_pin_number1: u8 = 1;
         let test_pin_number6: u8 = 6;
-        let mut test_dyn_pin1 = p
+        let test_dyn_pin1 = p
             .pins
             .pio0_16
             .into_dynamic_pin_2(gpio.tokens.pio0_16, gpio::Level::Low);
-        let mut test_dyn_pin6 = p
+        let test_dyn_pin6 = p
             .pins
             .pio0_21
             .into_dynamic_pin_2(gpio.tokens.pio0_21, gpio::Level::Low);
-        test_dyn_pin1.switch_to_input(); // TODO note that this is glue and duct tape
-        test_dyn_pin6.switch_to_input(); // TODO note that this is glue and duct tape
         let _ = dyn_noint_pins.insert(test_pin_number1, test_dyn_pin1);
         let _ = dyn_noint_pins.insert(test_pin_number6, test_dyn_pin6);
 
-        // TODO do this for all dyn pins
+        // init queue that stores level reading for all dyn noint pins
         let (dyn_noint_levels_in, dyn_noint_levels_out) = PIN_TIMERINT.init();
 
         // Configure interrupt for pin connected to target's timer interrupt pin
@@ -684,7 +682,7 @@ const APP: () = {
                             }
                             else {
                                 rprintln!("Warning: Can't set pin #{} since it is configured as input.",
-                                          get_pin_number(pin) );
+                                          pin.get_pin_number().unwrap() );
                             }
                             Ok(())
                         }
@@ -718,7 +716,7 @@ const APP: () = {
                         ) => {
                             rprintln!("SET DIRECTION -> INPUT for {:?}.", pin);
 
-                            match get_pin_number(pin) {
+                            match pin.get_pin_number().unwrap() {
                                 RED_LED_PIN_NUMBER => pinint3_pin.switch_to_input(),
                                 GREEN_LED_PIN_NUMBER => pinint0_pin.switch_to_input(),
                                 CTS_PIN_NUMBER => {
@@ -762,7 +760,7 @@ const APP: () = {
                             };
 
                             // todo nicer and more generic once we start enabling ALL the pins
-                            match get_pin_number(pin) {
+                            match pin.get_pin_number().unwrap() {
                                 RED_LED_PIN_NUMBER => pinint3_pin.switch_to_output(gpio_level),
                                 GREEN_LED_PIN_NUMBER => pinint0_pin.switch_to_output(gpio_level),
                                 CTS_PIN_NUMBER => cts.switch_to_output(gpio_level),
@@ -799,7 +797,7 @@ const APP: () = {
                         ) => {
                             rprintln!("READ DYNAMIC PIN command for {:?}", pin);
 
-                            let pin_number = get_pin_number(pin);
+                            let pin_number = pin.get_pin_number().unwrap();
 
                             // TODO return bool from closure and when I've figured that out also
                             // fix pin_is_input
@@ -876,7 +874,7 @@ const APP: () = {
                                 }
                                 false => {
                                     rprintln!("Warning: Can't read pin #{} since it is configured as output.",
-                                              get_pin_number(pin));
+                                              pin.get_pin_number().unwrap());
                                     None
                                 }
                             };
@@ -1073,7 +1071,7 @@ fn handle_pin_interrupt_dynamic(
     while let Some(event) = int.next() {
         match event {
             pin_interrupt::Event { level, period } => {
-                let pin_number = get_pin_number(pin);
+                let pin_number = pin.get_pin_number().unwrap();
 
                 let level = match level {
                     gpio::Level::High => pin::Level::High,
@@ -1091,12 +1089,13 @@ fn handle_pin_interrupt_dynamic(
 // TODO merge w handle_pin_interrupt_dynamic / make more generic
 fn handle_pin_interrupt_noint_dynamic(
     consumer: &mut Consumer<'static, PinMeasurementEvent, U4>,
-    //_pin: DynamicGpioPin<Dynamic>,
     pins: &mut FnvIndexMap<usize, gpio::Level, U4>,
 ) {
     while let Some(event) = consumer.dequeue() {
         match event {
             PinMeasurementEvent { pin_number, level } => {
+                // TODO note that this stores a diff level type than handle_pin_interrupt_dynamic()
+                // -> angleichen
                 pins.insert(pin_number as usize, level).unwrap();
             }
         }
@@ -1121,14 +1120,5 @@ fn handle_pin_interrupt(
                 pins.insert(pin as usize, (level, period_ms)).unwrap();
             }
         }
-    }
-}
-
-/// Get the index of `pin` as counted on the breakout board (Arduino Style)
-// TODO impl this on DynamicPin! so you can do pin.get_number()
-fn get_pin_number(pin: DynamicPin) -> u8 {
-    match pin {
-        DynamicPin::GPIO(number) => number,
-        _ => todo!(),
     }
 }
