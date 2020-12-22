@@ -12,7 +12,7 @@ postcard = "0.5.1"
 
 [dependencies.lpc8xx-hal]
 #git      = "https://github.com/lpc-rs/lpc8xx-hal.git"
-path     = "../../lpc8xx-hal"
+path     = "../../../lpc8xx-hal"
 features = ["845"]
 
 [dependencies.serde]

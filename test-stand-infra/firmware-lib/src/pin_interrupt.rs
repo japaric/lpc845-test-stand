@@ -16,7 +16,6 @@ use lpc8xx_hal::{
     pinint,
     pins,
 };
-use lpc8xx_hal::{gpio, init_state::Enabled, mrt, pinint, pins, prelude::*};
 
 /// Represents a pin interrupt
 pub struct PinInterrupt {
