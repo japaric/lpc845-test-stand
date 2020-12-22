@@ -4,7 +4,6 @@
 //! code shared with the firmware). Eventually, a lot of it will be moved into
 //! a generally usable library that can be shared with other test suites.
 
-pub mod assistant;
 pub mod error;
 pub mod target;
 pub mod test_stand;

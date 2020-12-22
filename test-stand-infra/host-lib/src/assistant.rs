@@ -5,11 +5,11 @@ use std::collections::HashMap;
 
 use protocol::{
     AssistantToHost,
+    DynamicPin,
     HostToAssistant,
-    InputPin,
-    OutputPin,
     UsartMode,
     pin,
+    PinNumber,
 };
 
 use crate::{
@@ -23,8 +23,6 @@ use crate::{
         ReadLevelError,
     },
 };
-
-use lpc845_messages::{pin, AssistantToHost, DynamicPin, HostToAssistant, PinNumber, UsartMode};
 
 // TODO find a place to share them with t-a and t-t?
 /// some commonly used pin numbers
@@ -68,8 +66,7 @@ pub struct OutputPin<'assistant, Assistant> {
 
 // TODO add docs
 impl AssistantInterface<Assistant> {
-    pub fn new(conn: Conn, num_pins: u8) -> Self {
-        let assistant = Assistant::new(conn, num_pins);
+    pub fn new(assistant: Assistant) -> Self {
 
         AssistantInterface {
             real_assistant: RwLock::new(assistant),
@@ -98,7 +95,7 @@ impl AssistantInterface<Assistant> {
             match assistant.pins.remove(&pin_number) {
                 Some(mut pin) => {
                     pin.set_direction_input::<HostToAssistant>(&mut assistant.conn)
-                        .map_err(|err| AssistantPinOperationError::SetPinDirectionInputError(err))
+                        .map_err(|err| AssistantError::PinOperation(AssistantPinOperationError::SetPinDirectionInputError(err)))
                         .unwrap();
 
                     return Ok(InputPin {
@@ -107,10 +104,10 @@ impl AssistantInterface<Assistant> {
                         pin: pin,
                     });
                 }
-                None => return Err(AssistantPinOperationError::IllegalPinNumber(pin_number))),
+                None => return Err(AssistantError::PinOperation(AssistantPinOperationError::IllegalPinNumber(pin_number))),
             }
         }
-        Err(AssistantPinOperationError::AssistantLockedError)
+        Err(AssistantError::AssistantLocked)
     }
 
     /// Retrieve an OutputPin instance that we can use to (re)configure the test-assistant's pin with
@@ -147,7 +144,7 @@ impl AssistantInterface<Assistant> {
                 None => return Err(AssistantError::PinOperation(AssistantPinOperationError::IllegalPinNumber(pin_number))),
             }
         }
-        Err(AssistantPinOperationError::AssistantLockedError)
+        Err(AssistantError::AssistantLocked)
     }
 
     pub fn measure_gpio_period(
@@ -162,7 +159,7 @@ impl AssistantInterface<Assistant> {
         }
 
         // TODO more helpful error
-        Err(AssistantError::PinReadError(ReadLevelError::Timeout))
+        Err(AssistantError::PinRead(ReadLevelError::Timeout))
     }
 
     /// Wait to receive the provided data via USART
@@ -211,10 +208,7 @@ impl AssistantInterface<Assistant> {
             return assistant.send_to_target_usart(data);
         }
 
-        // TODO more helpful error
-        Err(AssistantError::UsartSend(ConnSendError(
-            host_lib::error::Error::AssistantLockedError,
-        )))
+        Err(AssistantError::AssistantLocked)
     }
 
     /// Instruct assistant to send this message to the target's USART/DMA
@@ -225,11 +219,9 @@ impl AssistantInterface<Assistant> {
             return assistant.send_to_target_usart_dma(data);
         }
 
-        // TODO more helpful error
-        Err(AssistantError::UsartSend(ConnSendError(
-            host_lib::error::Error::AssistantLockedError,
-        )))
+        Err(AssistantError::AssistantLocked)
     }
+
 
     /// Instruct assistant to send this message to the target's sync USART
     pub fn send_to_target_usart_sync(
@@ -242,10 +234,7 @@ impl AssistantInterface<Assistant> {
             return assistant.send_to_target_usart_sync(data);
         }
 
-        // TODO more helpful error
-        Err(AssistantError::UsartSend(ConnSendError(
-            host_lib::error::Error::AssistantLockedError,
-        )))
+        Err(AssistantError::AssistantLocked)
     }
 
     /// Instruct the assistant to disable CTS
@@ -257,9 +246,7 @@ impl AssistantInterface<Assistant> {
         }
 
         // TODO more helpful error
-        Err(AssistantError::SetPinHigh(ConnSendError(
-            host_lib::error::Error::AssistantLockedError,
-        )))
+        Err(AssistantError::AssistantLocked)
     }
 
     /// Wait for RTS signal to be enabled
@@ -284,10 +271,7 @@ impl AssistantInterface<Assistant> {
             return assistant.expect_nothing_from_target(timeout);
         }
 
-        // TODO more helpful error
-        Err(AssistantError::ExpectNothing(ConnReceiveError(
-            host_lib::error::Error::AssistantLockedError,
-        )))
+        Err(AssistantError::AssistantLocked)
     }
 
     /// Instruct the assistant to enable CTS
@@ -298,10 +282,7 @@ impl AssistantInterface<Assistant> {
             return assistant.enable_cts();
         }
 
-        // TODO more helpful error
-        Err(AssistantError::SetPinLow(ConnSendError(
-            host_lib::error::Error::AssistantLockedError,
-        )))
+        Err(AssistantError::AssistantLocked)
     }
 }
 
@@ -326,7 +307,7 @@ impl<'assistant> InputPin<'assistant, Assistant> {
                     assistant: self.assistant,
                 })
             }
-            Err(_) => Err(AssistantError::PinOperation(AssistantPinOperationError::AssistantLockedError)),
+            Err(_) => Err(AssistantError::AssistantLocked),
         }
     }
 
@@ -342,11 +323,11 @@ impl<'assistant> InputPin<'assistant, Assistant> {
                         Duration::from_millis(10),
                         &mut assistant.conn,
                     )
-                    .map_err(|err| AssistantError::ReadPin(err))?;
+                    .map_err(|err| AssistantError::PinRead(err))?;
 
                 Ok(pin_state.0 == pin::Level::Low)
             }
-            Err(_) => Err(AssistantError::PinOperation(AssistantPinOperationError::AssistantLockedError)),
+            Err(_) => Err(AssistantError::AssistantLocked),
         }
     }
 
@@ -377,7 +358,7 @@ impl<'assistant> OutputPin<'assistant, Assistant> {
                     assistant: self.assistant,
                 })
             }
-            Err(_) => Err(AssistantError::PinOperation(AssistantPinOperationError::AssistantLockedError)),
+            Err(_) => Err(AssistantError::AssistantLocked),
         }
     }
 
@@ -390,7 +371,7 @@ impl<'assistant> OutputPin<'assistant, Assistant> {
                 .pin
                 .set_level::<HostToAssistant>(pin::Level::Low, &mut assistant.conn)
                 .map_err(|err| AssistantError::SetPinLow(err)),
-            Err(_) => Err(AssistantError::PinOperation(AssistantPinOperationError::AssistantLockedError)),
+            Err(_) => Err(AssistantError::AssistantLocked),
         }
     }
 
@@ -403,7 +384,7 @@ impl<'assistant> OutputPin<'assistant, Assistant> {
                 .pin
                 .set_level::<HostToAssistant>(pin::Level::High, &mut assistant.conn)
                 .map_err(|err| AssistantError::SetPinLow(err)),
-            Err(_) => Err(AssistantError::PinOperation(AssistantPinOperationError::AssistantLockedError)),
+            Err(_) => Err(AssistantError::AssistantLocked),
         }
     }
 }
@@ -515,6 +496,39 @@ impl Assistant {
         Ok(pin_state.0 == pin::Level::Low)
     }
 
+    /// Instruct assistant to send this message to the target via USART
+    pub fn send_to_target_usart(&mut self, data: &[u8]) -> Result<(), AssistantError> {
+        self.conn
+            .send(&HostToAssistant::SendUsart {
+                mode: UsartMode::Regular,
+                data,
+            })
+            .map_err(|err| AssistantError::UsartSend(err))
+    }
+
+    /// Instruct assistant to send this message to the target's sync USART
+    pub fn send_to_target_usart_sync(
+        &mut self,
+        data: &[u8],
+    ) -> Result<(), AssistantError> {
+        self.conn
+            .send(&HostToAssistant::SendUsart {
+                mode: UsartMode::Sync,
+                data,
+            })
+            .map_err(|err| AssistantError::UsartSend(err))
+    }
+
+    /// Instruct assistant to send this message to the target's USART/DMA
+    pub fn send_to_target_usart_dma(&mut self, data: &[u8]) -> Result<(), AssistantError> {
+        self.conn
+            .send(&HostToAssistant::SendUsart {
+                mode: UsartMode::Dma,
+                data,
+            })
+            .map_err(|err| AssistantError::UsartSend(err))
+    }
+
     pub fn receive_from_target_usart_inner(
         &mut self,
         data: &[u8],
@@ -560,8 +574,8 @@ impl Assistant {
         &mut self,
         data: &[u8],
         timeout: Duration,
-    ) -> Result<Vec<u8>, AssistantUsartWaitError> {
-        self.receive_from_target_usart_inner(data, timeout, UsartMode::Regular)
+    ) -> Result<Vec<u8>, AssistantError> {
+        Ok(self.receive_from_target_usart_inner(data, timeout, UsartMode::Regular)?)
     }
 
     /// Wait to receive the provided data via USART in synchronous mode
@@ -573,7 +587,7 @@ impl Assistant {
         data: &[u8],
         timeout: Duration,
     ) -> Result<Vec<u8>, AssistantUsartWaitError> {
-        self.receive_from_target_usart_inner(data, timeout, UsartMode::Sync)
+        Ok(self.receive_from_target_usart_inner(data, timeout, UsartMode::Sync)?)
     }
 
     /// Measures the period of changes triggered by the target Timer interrupt signal
@@ -591,7 +605,7 @@ impl Assistant {
         &mut self,
         samples: u32,
         timeout: Duration,
-    ) -> Result<GpioPeriodMeasurement, AssistantPinReadError> {
+    ) -> Result<GpioPeriodMeasurement, AssistantError> {
         assert!(samples > 0);
 
         let target_timer_pin_number = 30;
@@ -643,7 +657,14 @@ impl Assistant {
     }
 
     /// Expect to hear nothing from the target within the given timeout period
-    pub fn expect_nothing_from_target(
+    pub fn expect_nothing_from_target(&mut self, timeout: Duration)
+    -> Result<(), AssistantError>
+    {
+        self.expect_nothing_from_target_inner(timeout)
+            .map_err(|err| AssistantError::ExpectNothing(err))
+    }
+
+    pub fn expect_nothing_from_target_inner(
         &mut self,
         timeout: Duration,
     ) -> Result<(), AssistantExpectNothingError> {
@@ -686,7 +707,8 @@ pub enum AssistantError {
     SetPinLow(ConnSendError),
     UsartSend(ConnSendError),
     UsartWait(AssistantUsartWaitError),
-    PinOperation(AssistantPinOperationError)
+    PinOperation(AssistantPinOperationError),
+    AssistantLocked,
 }
 
 impl From<ReadLevelError> for AssistantError {
@@ -722,6 +744,5 @@ pub enum AssistantPinOperationError {
     IllegalPinNumber(PinNumber),
     SetPinDirectionInputError(ConnSendError), // TODO rm Error from name
     SetPinDirectionOutput(ConnSendError),
-    ReadPinError(ReadLevelError), // TODO rm Error from name
-    AssistantLockedError, // TOOD move out of this enum?
+    ReadPinError(ReadLevelError), // TODO rm Error from name. TODO is this even ever used? diff to PinRead()??
 }

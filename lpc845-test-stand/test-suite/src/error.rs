@@ -2,7 +2,6 @@
 
 
 use host_lib::assistant::AssistantError;
-use host_lib::test_stand::NotConfiguredError;
 
 use super::{
     target::{
