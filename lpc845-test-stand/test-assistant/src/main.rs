@@ -86,8 +86,7 @@ const TIMER_INT_PERIOD_MS: u32 = 900 * 6000; // fires every 900 milliseconds
 /// some commonly used pin numbers
 const RTS_PIN_NUMBER: u8 = 18;
 const CTS_PIN_NUMBER: u8 = 19;
-const RED_LED_PIN_NUMBER: u8 = 29; // TODO use this for pinint0?
-const GREEN_LED_PIN_NUMBER: u8 = 31;
+const RED_LED_PIN_NUMBER: u8 = 29;
 
 /// The maxiumum number of GPIO pins that are direction-changeable at runtime and read
 /// periodically (i.e. do not trigger any interrupts)
@@ -97,8 +96,8 @@ type NUM_DYN_NOINT_PINS = U4;
 /// NOTE TO USERS: adjust the pins in this list to change which pin *could* be used as input pin.
 /// Currently only two Input-able pins are supported.
 #[allow(non_camel_case_types)]
-type PININT0_PIN = lpc8xx_hal::pins::PIO1_0; // make sure that these
-const PININT0_DYN_PIN: DynamicPin = DynamicPin::GPIO(GREEN_LED_PIN_NUMBER); // two match!
+type PININT0_PIN = lpc8xx_hal::pins::PIO1_2; // make sure that these
+const PININT0_DYN_PIN: DynamicPin = DynamicPin::GPIO(RED_LED_PIN_NUMBER); // two match!
 
 #[rtic::app(device = lpc8xx_hal::pac)]
 const APP: () = {
@@ -191,8 +190,8 @@ const APP: () = {
 
         // Configure interrupts for pins that could be connected to target's GPIO pins
         // TODO more elegantly: make all pins dynamic, interruptable
-        let pinint0_pin = p.pins.pio1_0.into_dynamic_pin(
-            gpio.tokens.pio1_0,
+        let pinint0_pin = p.pins.pio1_2.into_dynamic_pin(
+            gpio.tokens.pio1_2,
             gpio::Level::High, // off by default
             DynamicPinDirection::Input,
         );
@@ -684,7 +683,7 @@ const APP: () = {
                             rprintln!("SET DIRECTION -> INPUT for {:?}.", pin);
 
                             match pin.get_pin_number().unwrap() {
-                                GREEN_LED_PIN_NUMBER => pinint0_pin.switch_to_input(),
+                                RED_LED_PIN_NUMBER => pinint0_pin.switch_to_input(),
                                 CTS_PIN_NUMBER => {
                                     // TODO proper error handling
                                     rprintln!("CTS pin is never Input");
@@ -703,6 +702,9 @@ const APP: () = {
                                             // this is a dynamic non-interrupt pin, set its direction
                                             let pin = pin_map.get_mut(&pin_number).unwrap();
                                             pin.switch_to_input();
+                                        }
+                                        else {
+                                            rprintln!("unsupported pin: {:?}", pin_number)
                                         }
                                     });
                                 },
@@ -727,7 +729,7 @@ const APP: () = {
 
                             // todo nicer and more generic once we start enabling ALL the pins
                             match pin.get_pin_number().unwrap() {
-                                GREEN_LED_PIN_NUMBER => pinint0_pin.switch_to_output(gpio_level),
+                                RED_LED_PIN_NUMBER => pinint0_pin.switch_to_output(gpio_level),
                                 CTS_PIN_NUMBER => cts.switch_to_output(gpio_level),
                                 RTS_PIN_NUMBER => {
                                     // TODO proper error handling
@@ -740,6 +742,8 @@ const APP: () = {
                                             // this is a dynamic non-interrupt pin, set its direction
                                             let pin = pin_map.get_mut(&pin_number).unwrap();
                                             pin.switch_to_output(gpio_level);
+                                        } else {
+                                            rprintln!("unsupported pin")
                                         }
                                     });
                                 },
@@ -774,7 +778,7 @@ const APP: () = {
                             // TODO do I even need to check this? reading levels for output pins is
                             // legal too I think
                             let pin_is_input: bool = match (pin_number, is_dyn_noint_pin) {
-                                (GREEN_LED_PIN_NUMBER, false) => pinint0_pin.direction_is_input(),
+                                (RED_LED_PIN_NUMBER, false) => pinint0_pin.direction_is_input(),
                                 (RTS_PIN_NUMBER, false) => rts.direction_is_input(),
                                 (30, false) => {
                                     // TODO don't hardcode this! (see discussion in SetDirection)
