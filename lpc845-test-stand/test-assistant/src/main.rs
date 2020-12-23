@@ -13,7 +13,7 @@ use core::marker::PhantomData;
 use heapless::{consts::U4, consts::U8, spsc::Consumer, spsc::Producer, FnvIndexMap};
 use lpc8xx_hal::{
     cortex_m::interrupt,
-    gpio::{self, direction::Dynamic, DynamicGpioPin, GpioPin},
+    gpio::{self, direction::Dynamic, direction::Output, DynamicGpioPin, GpioPin},
     i2c,
     init_state::Enabled,
     mrt::{
@@ -41,13 +41,12 @@ use lpc8xx_hal::{
         PININT3,
     },
     pins::{
+        DynamicPinDirection,
         PIO0_8,
         PIO0_9,
         PIO0_20,
         PIO0_23,
-        PIO1_0,
         PIO1_1,
-        PIO1_2,
     },
     spi::{
         self,
@@ -64,16 +63,14 @@ use lpc8xx_hal::{
     Peripherals,
 };
 use rtt_target::rprintln;
-
 #[cfg(feature = "sleep")]
 use lpc8xx_hal::cortex_m::asm;
-
+use lpc845_messages::{AssistantToHost, HostToAssistant, InputPin, OutputPin, DynamicPin, UsartMode, pin};
 use firmware_lib::{
     pin_interrupt::{self, PinInterrupt},
     timer_interrupt::{PinMeasurementEvent, TimerInterrupt},
     usart::{RxIdle, RxInt, Tx, Usart},
 };
-use lpc845_messages::{pin, AssistantToHost, DynamicPin, HostToAssistant, InputPin, UsartMode};
 
 // By default (and we haven't changed that setting)
 // the SysTick timer runs at half the system
@@ -127,7 +124,7 @@ const APP: () = {
         target_sync_tx: Tx<USART3, SyncMode>,
 
         target_timer_int: pin_interrupt::Int<'static, PININT1, PIO1_1, MRT1>,
-        target_timer_idle: pin_interrupt::Idle<'static>,
+        blue_idle: pin_interrupt::Idle<'static>,
 
         pinint0_int: pin_interrupt::Int<'static, PININT0, PININT0_PIN, MRT0>,
         pinint0_idle: pin_interrupt::Idle<'static>,
@@ -206,6 +203,7 @@ const APP: () = {
         let pinint0_pin = p.pins.pio1_0.into_dynamic_pin(
             gpio.tokens.pio1_0,
             gpio::Level::High, // off by default
+            DynamicPinDirection::Input,
         );
         let mut pinint0_int = pinint
             .interrupts
@@ -214,10 +212,11 @@ const APP: () = {
         pinint0_int.enable_rising_edge();
         pinint0_int.enable_falling_edge();
 
-        let pinint3_pin = p
-            .pins
-            .pio1_2
-            .into_dynamic_pin(gpio.tokens.pio1_2, gpio::Level::High);
+        let pinint3_pin = p.pins.pio1_2.into_dynamic_pin(
+            gpio.tokens.pio1_2,
+            gpio::Level::High,
+            DynamicPinDirection::Input,
+        );
 
         let mut pinint3_int = pinint
             .interrupts
@@ -235,11 +234,11 @@ const APP: () = {
         let test_dyn_pin1 = p
             .pins
             .pio0_16
-            .into_dynamic_pin_2(gpio.tokens.pio0_16, gpio::Level::Low);
+            .into_dynamic_pin_2(gpio.tokens.pio0_16, gpio::Level::Low, DynamicPinDirection::Input);
         let test_dyn_pin6 = p
             .pins
             .pio0_21
-            .into_dynamic_pin_2(gpio.tokens.pio0_21, gpio::Level::Low);
+            .into_dynamic_pin_2(gpio.tokens.pio0_21, gpio::Level::Low, DynamicPinDirection::Input);
         let _ = dyn_noint_pins.insert(test_pin_number1, test_dyn_pin1);
         let _ = dyn_noint_pins.insert(test_pin_number6, test_dyn_pin6);
 
@@ -273,7 +272,7 @@ const APP: () = {
         let cts = p
             .pins
             .pio0_8
-            .into_dynamic_pin(gpio.tokens.pio0_8, gpio::Level::Low);
+            .into_dynamic_pin(gpio.tokens.pio0_8, gpio::Level::Low, DynamicPinDirection::Output);
 
         // Configure the clock for USART0, using the Fractional Rate Generator
         // (FRG) and the USART's own baud rate divider value (BRG). See user
@@ -345,6 +344,7 @@ const APP: () = {
         let rts = p.pins.pio0_9.into_dynamic_pin(
             gpio.tokens.pio0_9,
             gpio::Level::High, // off by default (shouldn't matter because rts is input)
+            DynamicPinDirection::Input,
         );
         let mut rts_int = pinint
             .interrupts
@@ -408,7 +408,7 @@ const APP: () = {
 
         let (pinint0_int, pinint0_idle) = INT0.init(pinint0_int, timers.mrt0);
         let (pinint3_int, pinint3_idle) = INT3.init(pinint3_int, timers.mrt3);
-        let (target_timer_int, target_timer_idle) =
+        let (target_timer_int, blue_idle) =
             TARGET_TIMER.init(target_timer_int, timers.mrt1);
         let (pwm_int,     pwm_idle)   = PWM.init(pwm_int, timers.mrt3);
 
@@ -488,7 +488,7 @@ const APP: () = {
             target_sync_tx,
 
             target_timer_int,
-            target_timer_idle,
+            blue_idle,
 
             pinint0_int,
             pinint0_idle,
@@ -527,7 +527,7 @@ const APP: () = {
             pinint0_idle,
             pinint3_idle,
             pwm_idle,
-            target_timer_idle,
+            blue_idle,
             target_rts_idle,
             pinint3_pin,
             pinint0_pin,
@@ -546,7 +546,7 @@ const APP: () = {
         let target_tx_dma = cx.resources.target_tx_dma;
         let target_sync_rx = cx.resources.target_sync_rx_idle;
         let target_sync_tx = cx.resources.target_sync_tx;
-        let target_timer_idle = cx.resources.target_timer_idle;
+        let blue_idle = cx.resources.blue_idle;
         let pinint0_idle = cx.resources.pinint0_idle;
         let pinint3_idle = cx.resources.pinint3_idle;
         let target_rts_idle = cx.resources.target_rts_idle;
@@ -830,7 +830,7 @@ const APP: () = {
                                             // is target timer; not dynamic yet
                                             // TODO don't hardcode this!
                                             pins
-                                                .get(&(InputPin::TargetTimer as usize))
+                                                .get(&(InputPin::Blue as usize))
                                                 .map(|&(level, period_ms)| {
                                                     pin::ReadLevelResult {
                                                         pin,
@@ -906,7 +906,7 @@ const APP: () = {
                 &mut dynamic_int_pins,
             );
             handle_pin_interrupt_noint_dynamic(dyn_noint_levels_out, &mut dynamic_noint_pins);
-            handle_pin_interrupt(target_timer_idle, InputPin::TargetTimer, &mut pins);
+            handle_pin_interrupt(blue_idle, InputPin::Blue, &mut pins);
 
             // We need this critical section to protect against a race
             // conditions with the interrupt handlers. Otherwise, the following

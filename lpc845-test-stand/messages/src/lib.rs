@@ -6,6 +6,7 @@ pub use protocol::{
     HostToAssistant,
     InputPin,
     OutputPin,
+    DynamicPin,
     UsartMode,
     pin,
 };
