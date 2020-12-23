@@ -9,6 +9,7 @@ pub use protocol::{
     DynamicPin,
     UsartMode,
     pin,
+    PinNumber,
 };
 
 

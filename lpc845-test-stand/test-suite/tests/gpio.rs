@@ -7,7 +7,7 @@ use std::thread::sleep;
 use std::time;
 
 use lpc845_messages::{pin::Level, PinNumber};
-use lpc845_test_suite::assistant::{Assistant, InputPin};
+use host_lib::assistant::{Assistant, InputPin};
 use lpc845_test_suite::{Result, TestStand};
 
 const RED_LED_PIN: PinNumber = 29;

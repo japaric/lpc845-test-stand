@@ -40,7 +40,6 @@ pub struct ReadLevel<Id> {
     pub pin: Id,
 }
 
-
 /// Sent by a test node in response to a `ReadLevel` message
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct ReadLevelResult<Id> {
