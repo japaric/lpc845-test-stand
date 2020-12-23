@@ -86,7 +86,7 @@ const TIMER_INT_PERIOD_MS: u32 = 900 * 6000; // fires every 900 milliseconds
 /// some commonly used pin numbers
 const RTS_PIN_NUMBER: u8 = 18;
 const CTS_PIN_NUMBER: u8 = 19;
-const RED_LED_PIN_NUMBER: u8 = 29;
+const RED_LED_PIN_NUMBER: u8 = 29; // TODO use this for pinint0?
 const GREEN_LED_PIN_NUMBER: u8 = 31;
 
 /// The maxiumum number of GPIO pins that are direction-changeable at runtime and read
@@ -99,10 +99,6 @@ type NUM_DYN_NOINT_PINS = U4;
 #[allow(non_camel_case_types)]
 type PININT0_PIN = lpc8xx_hal::pins::PIO1_0; // make sure that these
 const PININT0_DYN_PIN: DynamicPin = DynamicPin::GPIO(GREEN_LED_PIN_NUMBER); // two match!
-
-#[allow(non_camel_case_types)]
-type PININT3_PIN = lpc8xx_hal::pins::PIO1_2; // make sure that these
-const PININT3_DYN_PIN: DynamicPin = DynamicPin::GPIO(RED_LED_PIN_NUMBER); // two match!
 
 #[rtic::app(device = lpc8xx_hal::pac)]
 const APP: () = {
@@ -129,9 +125,6 @@ const APP: () = {
         pinint0_int: pin_interrupt::Int<'static, PININT0, PININT0_PIN, MRT0>,
         pinint0_idle: pin_interrupt::Idle<'static>,
 
-        pinint3_int: pin_interrupt::Int<'static, PININT3, PININT3_PIN, MRT3>,
-        pinint3_idle: pin_interrupt::Idle<'static>,
-
         dyn_noint_pins: FnvIndexMap<u8, DynamicGpioPin<Dynamic>, NUM_DYN_NOINT_PINS>,
         /// Level measurements for pins in dyn_noint_pins, indexed by pin id
         dyn_noint_levels_in:
@@ -149,7 +142,6 @@ const APP: () = {
         rts: GpioPin<PIO0_9, Dynamic>, // TODO make unidirectional again
         cts: GpioPin<PIO0_8, Dynamic>, // TODO make unidirectional again
         pinint0_pin: GpioPin<PININT0_PIN, Dynamic>, // pin that triggers PININT0 interrupt
-        pinint3_pin: GpioPin<PININT3_PIN, Dynamic>, // pin that triggers PININT3 interrupt
 
         i2c: i2c::Slave<I2C0, Enabled<PhantomData<IOSC>>, Enabled>,
         spi: SPI<SPI0, Enabled<spi::Slave>>,
@@ -167,7 +159,6 @@ const APP: () = {
         static mut TARGET_SYNC: Usart = Usart::new();
 
         static mut INT0: PinInterrupt = PinInterrupt::new(); // formerly known as GREEN
-        static mut INT3: PinInterrupt = PinInterrupt::new();
         static mut TARGET_TIMER: PinInterrupt = PinInterrupt::new(); // formerly known as BLUE
         static mut RTS:  PinInterrupt = PinInterrupt::new();
         static mut PWM:  PinInterrupt = PinInterrupt::new();
@@ -212,19 +203,6 @@ const APP: () = {
         pinint0_int.enable_rising_edge();
         pinint0_int.enable_falling_edge();
 
-        let pinint3_pin = p.pins.pio1_2.into_dynamic_pin(
-            gpio.tokens.pio1_2,
-            gpio::Level::High,
-            DynamicPinDirection::Input,
-        );
-
-        let mut pinint3_int = pinint
-            .interrupts
-            .pinint3
-            .select::<PININT3_PIN>(&mut syscon.handle);
-        pinint3_int.enable_rising_edge();
-        pinint3_int.enable_falling_edge();
-
         // initialize data structures for all dynamic pins that are *not* interrupt-controlled
         let mut dyn_noint_pins = FnvIndexMap::<u8, DynamicGpioPin<Dynamic>, NUM_DYN_NOINT_PINS>::new();
 
@@ -233,8 +211,8 @@ const APP: () = {
         let test_pin_number6: u8 = 6;
         let test_dyn_pin1 = p
             .pins
-            .pio0_16
-            .into_dynamic_pin_2(gpio.tokens.pio0_16, gpio::Level::Low, DynamicPinDirection::Input);
+            .pio0_6 // TODO check if it still works after this change
+            .into_dynamic_pin_2(gpio.tokens.pio0_6, gpio::Level::Low, DynamicPinDirection::Input);
         let test_dyn_pin6 = p
             .pins
             .pio0_21
@@ -407,7 +385,6 @@ const APP: () = {
             TARGET_SYNC.init(target_sync);
 
         let (pinint0_int, pinint0_idle) = INT0.init(pinint0_int, timers.mrt0);
-        let (pinint3_int, pinint3_idle) = INT3.init(pinint3_int, timers.mrt3);
         let (target_timer_int, blue_idle) =
             TARGET_TIMER.init(target_timer_int, timers.mrt1);
         let (pwm_int,     pwm_idle)   = PWM.init(pwm_int, timers.mrt3);
@@ -433,11 +410,10 @@ const APP: () = {
             ..i2c::Interrupts::default()
         });
 
-        // TODO undo pin change!
         let (spi0_sck, _) = swm
             .movable_functions
             .spi0_sck
-            .assign(p.pins.pio0_20.into_swm_pin(), &mut swm_handle);
+            .assign(p.pins.pio0_16.into_swm_pin(), &mut swm_handle);
         let (spi0_mosi, _) = swm
             .movable_functions
             .spi0_mosi
@@ -493,11 +469,7 @@ const APP: () = {
             pinint0_int,
             pinint0_idle,
 
-            pinint3_int,
-            pinint3_idle,
-
             pinint0_pin,
-            pinint3_pin,
 
             dyn_noint_pins,
             dyn_noint_levels_in,
@@ -525,11 +497,9 @@ const APP: () = {
             target_sync_rx_idle,
             target_sync_tx,
             pinint0_idle,
-            pinint3_idle,
             pwm_idle,
             blue_idle,
             target_rts_idle,
-            pinint3_pin,
             pinint0_pin,
             pin_5,
             dyn_noint_pins,
@@ -548,10 +518,8 @@ const APP: () = {
         let target_sync_tx = cx.resources.target_sync_tx;
         let blue_idle = cx.resources.blue_idle;
         let pinint0_idle = cx.resources.pinint0_idle;
-        let pinint3_idle = cx.resources.pinint3_idle;
         let target_rts_idle = cx.resources.target_rts_idle;
         let pinint0_pin  = cx.resources.pinint0_pin;
-        let pinint3_pin  = cx.resources.pinint3_pin;
         let mut dyn_noint_pins = cx.resources.dyn_noint_pins;
         let dyn_noint_levels_out = cx.resources.dyn_noint_levels_out;
         let cts          = cx.resources.cts;
@@ -603,7 +571,9 @@ const APP: () = {
                             data,
                         } => {
                             rprintln!("Sending USART message using DMA.");
-                            target_tx_dma.bwrite_all(data)
+                            // TODO FIXME why does this not compile
+                            //target_tx_dma.bwrite_all(data)
+                            Ok(())
                         }
                         HostToAssistant::SendUsart {
                             mode: UsartMode::FlowControl,
@@ -651,7 +621,6 @@ const APP: () = {
                         ) => {
                             // todo nicer and more generic once we resolve the Pin Type Conundrum
                             let pin_is_output: bool = match pin {
-                                PININT3_DYN_PIN => pinint3_pin.direction_is_output(),
                                 PININT0_DYN_PIN => pinint0_pin.direction_is_output(),
                                 DynamicPin::GPIO(CTS_PIN_NUMBER) => cts.direction_is_output(),
                                 _ => false
@@ -663,7 +632,6 @@ const APP: () = {
                                     pin::Level::High => {
                                         rprintln!("dynamic HIGH for {:?}", pin);
                                         match pin {
-                                            PININT3_DYN_PIN => pinint3_pin.set_high(),
                                             PININT0_DYN_PIN => pinint0_pin.set_high(),
                                             DynamicPin::GPIO(RTS_PIN_NUMBER) => cts.set_high(),
                                             _ => todo!(),
@@ -672,7 +640,6 @@ const APP: () = {
                                     pin::Level::Low => {
                                         rprintln!("dynamic LOW for {:?}", pin);
                                         match pin {
-                                            PININT3_DYN_PIN => pinint3_pin.set_low(),
                                             PININT0_DYN_PIN => pinint0_pin.set_low(),
                                             DynamicPin::GPIO(RTS_PIN_NUMBER) => cts.set_low(),
                                             _ => todo!(),
@@ -717,7 +684,6 @@ const APP: () = {
                             rprintln!("SET DIRECTION -> INPUT for {:?}.", pin);
 
                             match pin.get_pin_number().unwrap() {
-                                RED_LED_PIN_NUMBER => pinint3_pin.switch_to_input(),
                                 GREEN_LED_PIN_NUMBER => pinint0_pin.switch_to_input(),
                                 CTS_PIN_NUMBER => {
                                     // TODO proper error handling
@@ -761,7 +727,6 @@ const APP: () = {
 
                             // todo nicer and more generic once we start enabling ALL the pins
                             match pin.get_pin_number().unwrap() {
-                                RED_LED_PIN_NUMBER => pinint3_pin.switch_to_output(gpio_level),
                                 GREEN_LED_PIN_NUMBER => pinint0_pin.switch_to_output(gpio_level),
                                 CTS_PIN_NUMBER => cts.switch_to_output(gpio_level),
                                 RTS_PIN_NUMBER => {
@@ -809,7 +774,6 @@ const APP: () = {
                             // TODO do I even need to check this? reading levels for output pins is
                             // legal too I think
                             let pin_is_input: bool = match (pin_number, is_dyn_noint_pin) {
-                                (RED_LED_PIN_NUMBER , false)=> pinint3_pin.direction_is_input(),
                                 (GREEN_LED_PIN_NUMBER, false) => pinint0_pin.direction_is_input(),
                                 (RTS_PIN_NUMBER, false) => rts.direction_is_input(),
                                 (30, false) => {
@@ -899,7 +863,6 @@ const APP: () = {
             handle_pin_interrupt(pwm,   InputPin::Pwm,   &mut pins);
             // TODO only do this for pins that are currently in input direction?
             handle_pin_interrupt_dynamic(pinint0_idle, PININT0_DYN_PIN, &mut dynamic_int_pins);
-            handle_pin_interrupt_dynamic(pinint3_idle, PININT3_DYN_PIN, &mut dynamic_int_pins);
             handle_pin_interrupt_dynamic(
                 target_rts_idle,
                 DynamicPin::GPIO(RTS_PIN_NUMBER),
