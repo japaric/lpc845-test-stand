@@ -50,10 +50,14 @@ fn target_should_set_pin_level() -> Result {
 
     // TEST & ASSERT POSTCONDITION
     test_stand.target.set_pin_low()?;
+    // green is a dynamic noint pin; ensure we don't read before the next timer tick
+    sleep(time::Duration::from_secs(1));
     assert!(in_pin.is_low()?);
 
     // TEST & ASSERT POSTCONDITION
     test_stand.target.set_pin_high()?;
+    // green is a dynamic noint pin; ensure we don't read before the next timer tick
+    sleep(time::Duration::from_secs(1));
     assert!(in_pin.is_high()?);
 
     Ok(())

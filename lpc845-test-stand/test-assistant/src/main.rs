@@ -87,6 +87,7 @@ const TIMER_INT_PERIOD_MS: u32 = 900 * 6000; // fires every 900 milliseconds
 const RTS_PIN_NUMBER: u8 = 18;
 const CTS_PIN_NUMBER: u8 = 19;
 const RED_LED_PIN_NUMBER: u8 = 29;
+const GREEN_LED_PIN_NUMBER : u8 = 31;
 
 /// The maxiumum number of GPIO pins that are direction-changeable at runtime and read
 /// periodically (i.e. do not trigger any interrupts)
@@ -206,9 +207,14 @@ const APP: () = {
         let mut dyn_noint_pins = FnvIndexMap::<u8, DynamicGpioPin<Dynamic>, NUM_DYN_NOINT_PINS>::new();
 
         // TODO add ALL the pins \o,
-        let test_pin_number1: u8 = 1;
+        let test_pin_number31: u8 = GREEN_LED_PIN_NUMBER;
+        let test_pin_number33: u8 = 33;
         let test_pin_number6: u8 = 6;
-        let test_dyn_pin1 = p
+        let test_dyn_pin31 = p
+            .pins
+            .pio1_0
+            .into_dynamic_pin_2(gpio.tokens.pio1_0, gpio::Level::Low, DynamicPinDirection::Input);
+        let test_dyn_pin33 = p
             .pins
             .pio0_6 // TODO check if it still works after this change
             .into_dynamic_pin_2(gpio.tokens.pio0_6, gpio::Level::Low, DynamicPinDirection::Input);
@@ -216,7 +222,8 @@ const APP: () = {
             .pins
             .pio0_21
             .into_dynamic_pin_2(gpio.tokens.pio0_21, gpio::Level::Low, DynamicPinDirection::Input);
-        let _ = dyn_noint_pins.insert(test_pin_number1, test_dyn_pin1);
+        let _ = dyn_noint_pins.insert(test_pin_number31, test_dyn_pin31);
+        let _ = dyn_noint_pins.insert(test_pin_number33, test_dyn_pin33);
         let _ = dyn_noint_pins.insert(test_pin_number6, test_dyn_pin6);
 
         // init queue that stores level reading for all dyn noint pins
