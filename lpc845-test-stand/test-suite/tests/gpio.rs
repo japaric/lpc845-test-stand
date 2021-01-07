@@ -13,14 +13,14 @@ use lpc845_test_suite::{Result, TestStand};
 const RED_LED_PIN: PinNumber = 29;
 const GRN_LED_PIN: PinNumber = 31;
 
-// NOTE: This only works if targets green Led pin is connected to
-// assistant's pin 1 and it is not used otherwise
-// TODO remove or chnge this test; does not work with default wiring.
+
 #[test]
-fn assistant_should_read_noint_dyn_pin() -> Result {
+fn assistant_should_change_and_read_noint_dyn_pin() -> Result {
     // SETUP
-    let pin_number = 1;
     let mut test_stand = TestStand::new()?;
+    // NOTE: The assistant's green led pin is a noint dyn pin, i.e. a dynamic pin that's read
+    // by polling rather than by interrupt
+    let pin_number = GRN_LED_PIN;
     // check if direction setting works in both directions
     let out_pin = test_stand
         .assistant
