@@ -83,9 +83,9 @@ dependencies = [
 
 [[package]]
 name = "cortex-m"
-version = "0.6.3"
+version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2be99930c99669a74d986f7fd2162085498b322e6daae8ef63a97cc9ac1dc73c"
+checksum = "88cdafeafba636c00c467ded7f1587210725a1adfab0c24028a7844b87738263"
 dependencies = [
  "aligned",
  "bare-metal",
@@ -142,9 +142,9 @@ dependencies = [
 
 [[package]]
 name = "crossterm"
-version = "0.18.1"
+version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cef9149b29071d44c9fb98fd9c27fcf74405bbdb761889ad6a03f36be93b0b15"
+checksum = "7c36c10130df424b2f3552fcc2ddcd9b28a27b1e54b358b45874f88d1ca6888c"
 dependencies = [
  "bitflags",
  "crossterm_winapi",
@@ -158,9 +158,9 @@ dependencies = [
 
 [[package]]
 name = "crossterm_winapi"
-version = "0.6.2"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c2265c3f8e080075d9b6417aa72293fc71662f34b4af2612d8d1b074d29510db"
+checksum = "0da8964ace4d3e4a044fd027919b2237000b24315a37c916f61809f1ff2140b9"
 dependencies = [
  "winapi",
 ]
@@ -177,18 +177,18 @@ dependencies = [
 
 [[package]]
 name = "embedded-hal"
-version = "1.0.0-alpha.2"
+version = "1.0.0-alpha.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7cc3810c4daf242ad872676ee4e9a520ae1d8e463ebe5c421ce8660ef61a2bea"
+checksum = "f2260cabeacf4bda1df1a8d54f67047a9aadf02fe14cfab07649f2cec6a4693b"
 dependencies = [
  "nb 1.0.0",
 ]
 
 [[package]]
 name = "embedded-time"
-version = "0.10.0"
+version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bb234982020886c2f30a99ae5ff5c8de237e72bfdc464f06e5b83c8dd177e190"
+checksum = "f85ab0d224a6c70f11426a9f04d5f26d250605b80df8fbed197e49d4454f58d7"
 dependencies = [
  "num",
 ]
@@ -352,7 +352,7 @@ dependencies = [
  "cortex-m-rt",
  "crossterm",
  "embedded-hal 0.2.4",
- "embedded-hal 1.0.0-alpha.2",
+ "embedded-hal 1.0.0-alpha.4",
  "embedded-time",
  "lpc845-pac",
  "nb 1.0.0",

@@ -53,6 +53,7 @@ use lpc8xx_hal::{
         PININT3,
     },
     pins::{
+        DynamicPinDirection,
         PIO0_8,
         PIO0_9,
         PIO1_1,
@@ -193,6 +194,7 @@ const APP: () = {
         let pinint0_pin = p.pins.pio1_0.into_dynamic_pin(
             gpio.tokens.pio1_0,
             gpio::Level::High, // off by default
+            DynamicPinDirection::Input,
         );
         let mut pinint0_int = pinint
             .interrupts
@@ -204,6 +206,7 @@ const APP: () = {
         let pinint3_pin = p.pins.pio1_2.into_dynamic_pin(
             gpio.tokens.pio1_2,
             gpio::Level::Low,
+            DynamicPinDirection::Input,
         );
 
         let mut pinint3_int = pinint
@@ -222,9 +225,11 @@ const APP: () = {
         target_timer_int.enable_rising_edge();
         target_timer_int.enable_falling_edge();
 
+        // TODO make this unidirectional again
         let cts = p.pins.pio0_8.into_dynamic_pin(
             gpio.tokens.pio0_8,
             gpio::Level::Low,
+            DynamicPinDirection::Output,
         );
 
         // Configure the clock for USART0, using the Fractional Rate Generator
@@ -294,9 +299,11 @@ const APP: () = {
         });
 
         // Configure interrupt for RTS pin
+        // TODO make this unidirectional again
         let rts = p.pins.pio0_9.into_dynamic_pin(
             gpio.tokens.pio0_9,
             gpio::Level::High, // off by default (shouldn't matter because rts is input)
+            DynamicPinDirection::Input,
         );
         let mut rts_int = pinint
             .interrupts
