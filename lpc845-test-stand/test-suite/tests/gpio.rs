@@ -81,6 +81,36 @@ fn target_should_read_input_level() -> Result {
     Ok(())
 }
 
+/**
+ * Ensure that pins which trigger an interrupt on change return the correct level
+ * immediately, no wait period required.
+ */
+#[test]
+fn assistant_should_return_interruptable_pin_status_immediately() -> Result {
+    /*
+     Note: The only interrupt-triggered dynamic puin at the moment is pin 29 (red led).
+     The current test-target API only allows using Pin 29 (red led) as target out,
+     assistant in. We can still check if reading works immediately, though, because
+     output pin levels can be read too.
+    */
+    let interruptable_pin = RED_LED_PIN;
+
+    // SETUP
+    let test_stand = TestStand::new()?;
+    let mut out_pin = test_stand
+        .assistant
+        .create_gpio_output_pin(interruptable_pin, Level::High)?;
+
+    // RUN TEST
+    out_pin.set_low()?;
+    assert!(out_pin.is_low()?);
+
+    out_pin.set_high()?;
+    assert!(out_pin.is_high()?);
+
+    Ok(())
+}
+
 #[test]
 #[allow(unused_assignments)] // to silence the last conversion
 fn assistant_red_led_should_be_toggleable_by_pin_direction() -> Result {
