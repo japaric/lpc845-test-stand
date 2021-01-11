@@ -81,6 +81,54 @@ fn target_should_read_input_level() -> Result {
     Ok(())
 }
 
+#[test]
+fn assistant_should_read_level_repeatedly_interruptable_pin() -> Result {
+    let interruptable_pin = RED_LED_PIN;
+
+    // SETUP
+    let test_stand = TestStand::new()?;
+    let mut out_pin = test_stand
+        .assistant
+        .create_gpio_output_pin(interruptable_pin, Level::High)?;
+
+    // RUN TEST & ASSERT POSTCONDITION
+    assert!(out_pin.is_high()?);
+    assert!(out_pin.is_high()?);
+
+    out_pin.set_low()?;
+    assert!(out_pin.is_low()?);
+    assert!(out_pin.is_low()?);
+
+    Ok(())
+}
+
+#[test]
+fn assistant_should_read_level_repeatedly_polled_pin() -> Result {
+
+    // SETUP
+    let mut test_stand = TestStand::new()?;
+    let mut in_pin = test_stand
+        .assistant
+        .create_gpio_input_pin(GRN_LED_PIN)?;
+
+    // RUN TEST & ASSERT POSTCONDITION
+    test_stand.target.set_pin_low()?;
+    // green is a dynamic noint pin; ensure we don't read before the next timer tick
+    sleep(time::Duration::from_secs(1));
+    assert!(in_pin.is_low()?);
+    assert!(in_pin.is_low()?);
+
+    // TEST & ASSERT POSTCONDITION
+    test_stand.target.set_pin_high()?;
+    // green is a dynamic noint pin; ensure we don't read before the next timer tick
+    sleep(time::Duration::from_secs(1));
+    assert!(in_pin.is_high()?);
+    assert!(in_pin.is_high()?);
+
+    Ok(())
+}
+
+
 /**
  * Ensure that pins which trigger an interrupt on change return the correct level
  * immediately, no wait period required.
