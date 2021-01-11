@@ -45,13 +45,17 @@ Supports a test suite that covers some of the peripheral APIs in the LPC8xx HAL 
 
 
 ### Dynamic pin constraints
-Dynamic pins are pins whose direction (Input, Output) you can toggle from unit tests. Then, you can use them just like you would a fixed In/Output pin.
+Dynamic pins are pins whose direction (Input, Output) you can toggle from unit tests. After you've given them a direction, you can use them just like you would a fixed In/Output pin.
+
+There are two kinds of dynamic pins:
+- **interrupt-driven dynamic pins**, which will report any changes right away
+- **polled dynamic pins**, which will report changes within a timeframe of 500 ms
+
+Currently, some limitations apply:
 
 - only the test-assistant firmware supports dynamic pins
-- you can only use pins number 29 and 32 (RED/GREEN LED) as dynamic pins
-- you can only configure these two pins as input pins from a test. Level changes on these pins will trigger interrupts INT3 and INT0 respectively.
-
-These are to be resolved in the future so you can have multiple run-time configurable GPIO pins and also reconfigure UART.
+- you can only use pin number `29` (RED LED) as an *interrupt-driven* dynamic pin
+- you can only use pins number `31` (GRN LED), `33` and `6` as **polled**  dynamic pins
 
 ## License
 
