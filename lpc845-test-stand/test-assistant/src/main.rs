@@ -782,75 +782,50 @@ const APP: () = {
                                 is_dyn_noint_pin = pin_map.contains_key(&pin_number);
                             });
 
-                            // TODO do I even need to check this? reading levels for output pins is
-                            // legal too I think
-                            let pin_is_input: bool = match (pin_number, is_dyn_noint_pin) {
-                                (RED_LED_PIN_NUMBER, false) => pinint0_pin.direction_is_input(),
-                                (RTS_PIN_NUMBER, false) => rts.direction_is_input(),
+                            let result = match (pin_number, is_dyn_noint_pin) {
                                 (30, false) => {
-                                    // TODO don't hardcode this! (see discussion in SetDirection)
-                                    true
-                                },
-                                (_, true) => {
-                                    // TODO don't hardcode this! (see discussion in SetDirection)
-                                    true
-                                },
-                                _ => unreachable!()
-                            };
-
-                            let result = match pin_is_input {
-                                true => {
-                                    match (pin_number, is_dyn_noint_pin) {
-                                        (30, false) => {
-                                            // is target timer; not dynamic yet
-                                            // TODO don't hardcode this!
-                                            pins
-                                                .get(&(InputPin::Blue as usize))
-                                                .map(|&(level, period_ms)| {
-                                                    pin::ReadLevelResult {
-                                                        pin,
-                                                        level,
-                                                        period_ms,
-                                                    }
-                                                })
-                                        }
-                                        (pin_number, true) => {
-                                            rprintln!("dynamic_noint_pins: {:?}", dynamic_noint_pins);
-
-                                            dynamic_noint_pins
-                                            .get(&(pin_number as usize))
-                                            .map(|gpio_level| {
-                                                // TODO impl From instead?
-                                                let level = match gpio_level {
-                                                    gpio::Level::High => pin::Level::High,
-                                                    gpio::Level::Low => pin::Level::Low,
-                                                };
-
-                                                pin::ReadLevelResult {
-                                                    pin,
-                                                    level,
-                                                    period_ms: None,
-                                                }
-                                            })
-                                        }
-                                        (pin_number, false) => {
-                                            rprintln!("dynamic_int_pins: {:?}", dynamic_int_pins);
-                                            dynamic_int_pins
-                                            .get(&(pin_number as usize))
-                                            .map(|&(level, period_ms)| {
-                                                pin::ReadLevelResult {
-                                                    pin,
-                                                    level,
-                                                    period_ms,
-                                                }
-                                            })
-                                        }
-                                    }
+                                    // is target timer; not dynamic yet
+                                    // TODO don't hardcode this!
+                                    pins
+                                        .get(&(InputPin::Blue as usize))
+                                        .map(|&(level, period_ms)| {
+                                            pin::ReadLevelResult {
+                                                pin,
+                                                level,
+                                                period_ms,
+                                            }
+                                        })
                                 }
-                                false => {
-                                    rprintln!("Warning: Can't read pin #{} since it is configured as output.",
-                                              pin.get_pin_number().unwrap());
-                                    None
+                                (pin_number, true) => {
+                                    rprintln!("dynamic_noint_pins: {:?}", dynamic_noint_pins);
+
+                                    dynamic_noint_pins
+                                    .get(&(pin_number as usize))
+                                    .map(|gpio_level| {
+                                        // TODO impl From instead?
+                                        let level = match gpio_level {
+                                            gpio::Level::High => pin::Level::High,
+                                            gpio::Level::Low => pin::Level::Low,
+                                        };
+
+                                        pin::ReadLevelResult {
+                                            pin,
+                                            level,
+                                            period_ms: None,
+                                        }
+                                    })
+                                }
+                                (pin_number, false) => {
+                                    rprintln!("dynamic_int_pins: {:?}", dynamic_int_pins);
+                                    dynamic_int_pins
+                                    .get(&(pin_number as usize))
+                                    .map(|&(level, period_ms)| {
+                                        pin::ReadLevelResult {
+                                            pin,
+                                            level,
+                                            period_ms,
+                                        }
+                                    })
                                 }
                             };
 

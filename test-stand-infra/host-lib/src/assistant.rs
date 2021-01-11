@@ -387,6 +387,34 @@ impl<'assistant> OutputPin<'assistant, Assistant> {
             Err(_) => Err(AssistantError::AssistantLocked),
         }
     }
+
+    /// Indicates whether this pin receives a **Low** signal from the test target
+    pub fn is_low(&mut self) -> Result<bool, AssistantError> {
+        // TODO handle lock getting failures better
+        let lock = self.assistant.try_write();
+        match lock {
+            Ok(mut assistant) => {
+                let pin_state = self
+                    .pin
+                    .read_level::<HostToAssistant, AssistantToHost>(
+                        Duration::from_millis(10),
+                        &mut assistant.conn,
+                    )
+                    .map_err(|err| AssistantError::PinRead(err))?;
+
+                Ok(pin_state.0 == pin::Level::Low)
+            }
+            Err(_) => Err(AssistantError::AssistantLocked),
+        }
+    }
+
+    /// Indicates whether this pin receives a **High** signal from the test target
+    pub fn is_high(&mut self) -> Result<bool, AssistantError> {
+        match self.is_low() {
+            Ok(is_low) => Ok(!is_low),
+            Err(err) => Err(err),
+        }
+    }
 }
 
 impl Assistant {
