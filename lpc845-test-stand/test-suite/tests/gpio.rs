@@ -89,13 +89,18 @@ fn assistant_should_read_level_repeatedly_interruptable_pin() -> Result {
     let test_stand = TestStand::new()?;
     let mut out_pin = test_stand
         .assistant
-        .create_gpio_output_pin(interruptable_pin, Level::High)?;
+        .create_gpio_output_pin(interruptable_pin, Level::Low)?;
 
-    // RUN TEST & ASSERT POSTCONDITION
+    // FIXME currently an explicit level change is required after init to "activate" the pin
+    out_pin.set_high()?;
+
+    // RUN TEST
+    assert!(out_pin.is_high()?);
     assert!(out_pin.is_high()?);
     assert!(out_pin.is_high()?);
 
     out_pin.set_low()?;
+    assert!(out_pin.is_low()?);
     assert!(out_pin.is_low()?);
     assert!(out_pin.is_low()?);
 
