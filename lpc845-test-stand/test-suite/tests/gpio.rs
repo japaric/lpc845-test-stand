@@ -13,6 +13,7 @@ use lpc845_test_suite::{Result, TestStand};
 const RED_LED_PIN: PinNumber = 29;
 const GRN_LED_PIN: PinNumber = 31;
 
+const PIN_WAIT_TIME: u64 = 200;
 
 #[test]
 fn assistant_should_change_and_read_noint_dyn_pin() -> Result {
@@ -30,13 +31,13 @@ fn assistant_should_change_and_read_noint_dyn_pin() -> Result {
     // TEST & ASSERT POSTCONDITION
     test_stand.target.set_pin_low()?;
     // ensure we don't read before the next timer tick
-    sleep(time::Duration::from_secs(1));
+    sleep(time::Duration::from_millis(PIN_WAIT_TIME));
     assert!(in_pin.is_low()?);
 
     // TEST & ASSERT POSTCONDITION
     test_stand.target.set_pin_high()?;
     // ensure we don't read before the next timer tick
-    sleep(time::Duration::from_secs(1));
+    sleep(time::Duration::from_millis(PIN_WAIT_TIME));
     assert!(in_pin.is_high()?);
 
     Ok(())
@@ -51,13 +52,13 @@ fn target_should_set_pin_level() -> Result {
     // TEST & ASSERT POSTCONDITION
     test_stand.target.set_pin_low()?;
     // green is a dynamic noint pin; ensure we don't read before the next timer tick
-    sleep(time::Duration::from_secs(1));
+    sleep(time::Duration::from_millis(PIN_WAIT_TIME));
     assert!(in_pin.is_low()?);
 
     // TEST & ASSERT POSTCONDITION
     test_stand.target.set_pin_high()?;
     // green is a dynamic noint pin; ensure we don't read before the next timer tick
-    sleep(time::Duration::from_secs(1));
+    sleep(time::Duration::from_millis(PIN_WAIT_TIME));
     assert!(in_pin.is_high()?);
 
     Ok(())
@@ -119,14 +120,14 @@ fn assistant_should_read_level_repeatedly_polled_pin() -> Result {
     // RUN TEST & ASSERT POSTCONDITION
     test_stand.target.set_pin_low()?;
     // green is a dynamic noint pin; ensure we don't read before the next timer tick
-    sleep(time::Duration::from_secs(1));
+    sleep(time::Duration::from_millis(PIN_WAIT_TIME));
     assert!(in_pin.is_low()?);
     assert!(in_pin.is_low()?);
 
     // TEST & ASSERT POSTCONDITION
     test_stand.target.set_pin_high()?;
     // green is a dynamic noint pin; ensure we don't read before the next timer tick
-    sleep(time::Duration::from_secs(1));
+    sleep(time::Duration::from_millis(PIN_WAIT_TIME));
     assert!(in_pin.is_high()?);
     assert!(in_pin.is_high()?);
 
@@ -177,11 +178,11 @@ fn assistant_all_dyn_gpio_pins_should_work() -> Result {
 
         // RUN TEST & ASSERT POSTCONDITION
         out_pin.set_high()?;
-        sleep(time::Duration::from_secs(1));
+        sleep(time::Duration::from_millis(PIN_WAIT_TIME));
         assert!(out_pin.is_high()?);
 
         out_pin.set_low()?;
-        sleep(time::Duration::from_secs(1));
+        sleep(time::Duration::from_millis(PIN_WAIT_TIME));
         assert!(out_pin.is_low()?);
     }
 

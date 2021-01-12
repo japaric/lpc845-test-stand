@@ -49,7 +49,7 @@ The LPC845 test stand supports Dynamic Pins. Dynamic pins are pins whose directi
 
 There are two kinds of dynamic pins:
 - **interrupt-driven dynamic pins**, which will report any changes right away
-- **polled dynamic pins**, which will report changes within a timeframe of 500 ms
+- **polled dynamic pins**, which will report changes within a timeframe of 200 ms
 
 Currently, some limitations apply:
 

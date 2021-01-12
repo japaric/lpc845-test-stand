@@ -80,7 +80,7 @@ use firmware_lib::{
 //
 // At 6 MHz, 1 ms are 6000 timer ticks.
 // TODO: value picked for human reada/debuggability; adjust
-const TIMER_INT_PERIOD_MS: u32 = 900 * 6000; // fires every 900 milliseconds
+const TIMER_INT_PERIOD_MS: u32 = 100 * 6000; // fires every 100 milliseconds
 
 // TODO find a place to share them with t-s and t-t?
 /// some commonly used pin numbers
@@ -627,7 +627,7 @@ const APP: () = {
                         ) => {
                             let pin_number = pin.get_pin_number().unwrap();
 
-                            // todo less repetitive once we've unified pin types
+                            // TODO less repetitive once we've unified pin types
                             // TODO maybe just add a set_level() function to the hal?
                             match pin_number {
                                 RED_LED_PIN_NUMBER => {
