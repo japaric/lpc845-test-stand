@@ -44,8 +44,8 @@ These are the crates that are independent of any specific test suite. If you wan
 Supports a test suite that covers some of the peripheral APIs in the LPC8xx HAL library. See [its own README file](https://github.com/braun-embedded/lpc845-test-stand/blob/master/lpc845-test-stand/README.md) for more information.
 
 
-### Dynamic pin constraints
-Dynamic pins are pins whose direction (Input, Output) you can toggle from unit tests. After you've given them a direction, you can use them just like you would a fixed In/Output pin.
+#### Dynamic pin constraints
+The LPC845 test stand supports Dynamic Pins. Dynamic pins are pins whose direction (Input, Output) you can toggle from unit tests. After you've given them a direction, you can use them just like you would a fixed In/Output pin.
 
 There are two kinds of dynamic pins:
 - **interrupt-driven dynamic pins**, which will report any changes right away
