@@ -636,7 +636,7 @@ const APP: () = {
                                 // todo nicer and more generic once we resolve the Pin Type Conundrum
                                 match level {
                                     pin::Level::High => {
-                                        rprintln!("dynamic HIGH for {:?}", pin);
+                                        rprintln!("set {:?} HIGH", pin);
                                         match pin {
                                             PININT0_DYN_PIN => pinint0_pin.set_high(),
                                             DynamicPin::GPIO(RTS_PIN_NUMBER) => cts.set_high(),
@@ -644,7 +644,7 @@ const APP: () = {
                                         };
                                     }
                                     pin::Level::Low => {
-                                        rprintln!("dynamic LOW for {:?}", pin);
+                                        rprintln!("set {:?} LOW", pin);
                                         match pin {
                                             PININT0_DYN_PIN => pinint0_pin.set_low(),
                                             DynamicPin::GPIO(RTS_PIN_NUMBER) => cts.set_low(),
@@ -687,7 +687,7 @@ const APP: () = {
                                 level: None,
                             }
                         ) => {
-                            rprintln!("SET DIRECTION -> INPUT for {:?}.", pin);
+                            //rprintln!("{:?} is Input", pin);
 
                             match pin.get_pin_number().unwrap() {
                                 RED_LED_PIN_NUMBER => pinint0_pin.switch_to_input(),
@@ -726,7 +726,7 @@ const APP: () = {
                                 level: Some(level),
                             }
                         ) => {
-                            rprintln!("SET DIRECTION -> OUTPUT for {:?}. Level {:?}", pin, level);
+                            //rprintln!("{:?} is Output | Level {:?}", pin, level);
                             // convert from lpc8xx_hal::gpio::Level to protocol::pin::Level
                             // TODO impl From instead?
                             let gpio_level = match level {
@@ -771,7 +771,7 @@ const APP: () = {
                         HostToAssistant::ReadDynamicPin(
                             pin::ReadLevel { pin }
                         ) => {
-                            rprintln!("READ DYNAMIC PIN command for {:?}", pin);
+                            rprintln!("READ DYNAMIC PIN {:?}", pin);
 
                             let pin_number = pin.get_pin_number().unwrap();
 
@@ -797,8 +797,6 @@ const APP: () = {
                                         })
                                 }
                                 (pin_number, true) => {
-                                    rprintln!("dynamic_noint_pins: {:?}", dynamic_noint_pins);
-
                                     dynamic_noint_pins
                                     .get(&(pin_number as usize))
                                     .map(|gpio_level| {
@@ -816,7 +814,6 @@ const APP: () = {
                                     })
                                 }
                                 (pin_number, false) => {
-                                    rprintln!("dynamic_int_pins: {:?}", dynamic_int_pins);
                                     dynamic_int_pins
                                     .get(&(pin_number as usize))
                                     .map(|&(level, period_ms)| {
