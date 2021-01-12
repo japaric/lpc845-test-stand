@@ -30,7 +30,7 @@ const RTS_PIN_NUMBER: PinNumber = 18;
 const CTS_PIN_NUMBER: PinNumber = 19;
 
 // TODO tokenize instead
-static LEGAL_DYNAMIC_PINS: [PinNumber; 4] = [6, 29, 31, 33];
+pub static LEGAL_DYNAMIC_PINS: [PinNumber; 4] = [6, 29, 31, 33];
 
 /// A wrapper around the test-assistant for easy pin configuration.
 pub struct AssistantInterface<Assistant> {
