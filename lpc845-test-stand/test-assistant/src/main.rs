@@ -12,6 +12,7 @@ use core::marker::PhantomData;
 
 use heapless::{consts::U4, consts::U8, spsc::Consumer, spsc::Producer, FnvIndexMap};
 use lpc8xx_hal::{
+    prelude::*,
     cortex_m::interrupt,
     gpio::{self, direction::Dynamic, direction::Output, DynamicGpioPin, GpioPin},
     i2c,
@@ -577,9 +578,7 @@ const APP: () = {
                             data,
                         } => {
                             rprintln!("Sending USART message using DMA.");
-                            // TODO FIXME why does this not compile
-                            //target_tx_dma.bwrite_all(data)
-                            Ok(())
+                            target_tx_dma.bwrite_all(data)
                         }
                         HostToAssistant::SendUsart {
                             mode: UsartMode::FlowControl,
