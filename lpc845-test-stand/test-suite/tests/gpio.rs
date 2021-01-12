@@ -7,7 +7,7 @@ use std::thread::sleep;
 use std::time;
 
 use lpc845_messages::{pin::Level, PinNumber};
-use host_lib::assistant::{Assistant, InputPin};
+use host_lib::assistant::{Assistant, InputPin, LEGAL_DYNAMIC_PINS};
 use lpc845_test_suite::{Result, TestStand};
 
 const RED_LED_PIN: PinNumber = 29;
@@ -133,7 +133,6 @@ fn assistant_should_read_level_repeatedly_polled_pin() -> Result {
     Ok(())
 }
 
-
 /**
  * Ensure that pins which trigger an interrupt on change return the correct level
  * immediately, no wait period required.
@@ -160,6 +159,31 @@ fn assistant_should_return_interruptable_pin_status_immediately() -> Result {
 
     out_pin.set_high()?;
     assert!(out_pin.is_high()?);
+
+    Ok(())
+}
+
+
+#[test]
+fn assistant_all_dyn_gpio_pins_should_work() -> Result {
+
+    let test_stand = TestStand::new()?;
+
+    for pin in &LEGAL_DYNAMIC_PINS {
+        // SETUP
+        let mut out_pin = test_stand
+            .assistant
+            .create_gpio_output_pin(*pin, Level::Low)?;
+
+        // RUN TEST & ASSERT POSTCONDITION
+        out_pin.set_high()?;
+        sleep(time::Duration::from_secs(1));
+        assert!(out_pin.is_high()?);
+
+        out_pin.set_low()?;
+        sleep(time::Duration::from_secs(1));
+        assert!(out_pin.is_low()?);
+    }
 
     Ok(())
 }

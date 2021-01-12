@@ -625,36 +625,71 @@ const APP: () = {
                                 level,
                             }
                         ) => {
+                            let pin_number = pin.get_pin_number().unwrap();
+
+                            // TODO untangle at least a little bit to reduce pin map operations and
+                            // general mess
+
                             // todo nicer and more generic once we resolve the Pin Type Conundrum
-                            let pin_is_output: bool = match pin {
-                                PININT0_DYN_PIN => pinint0_pin.direction_is_output(),
-                                DynamicPin::GPIO(CTS_PIN_NUMBER) => cts.direction_is_output(),
-                                _ => false
+                            let pin_is_output: bool = match pin_number {
+                                RED_LED_PIN_NUMBER => pinint0_pin.direction_is_output(),
+                                CTS_PIN_NUMBER => cts.direction_is_output(),
+                                RTS_PIN_NUMBER => rts.direction_is_output(),
+                                pin_number => {
+                                    dyn_noint_pins.lock(|pin_map|{ // TODO turn this into a macro?
+                                        if pin_map.contains_key(&pin_number) {
+                                            let pin = pin_map.get_mut(&pin_number).unwrap();
+                                            pin.direction_is_output()
+                                        }
+                                        else {
+                                            rprintln!("can't query unsupported pin: {:?}", pin_number);
+                                            false
+                                        }
+                                    })
+                                },
                             };
 
-                            if pin_is_output {
+                            if pin_is_output { // TODO make this an early return
                                 // todo nicer and more generic once we resolve the Pin Type Conundrum
                                 match level {
                                     pin::Level::High => {
                                         rprintln!("set {:?} HIGH", pin);
-                                        match pin {
-                                            PININT0_DYN_PIN => pinint0_pin.set_high(),
-                                            DynamicPin::GPIO(RTS_PIN_NUMBER) => cts.set_high(),
-                                            _ => todo!(),
+                                        match pin_number {
+                                            RED_LED_PIN_NUMBER => pinint0_pin.set_high(),
+                                            RTS_PIN_NUMBER => cts.set_high(), // TODO double-check this RTS/CTS mismatch
+                                            pin_number => {
+                                                dyn_noint_pins.lock(|pin_map|{ // TODO turn this into a macro?
+                                                    if pin_map.contains_key(&pin_number) {
+                                                        // this is a dynamic non-interrupt pin, set its level
+                                                        let pin = pin_map.get_mut(&pin_number).unwrap();
+                                                        pin.set_high()
+                                                    }
+                                                })
+                                                // TODO don't fail silently here?
+                                            },
                                         };
                                     }
                                     pin::Level::Low => {
                                         rprintln!("set {:?} LOW", pin);
-                                        match pin {
-                                            PININT0_DYN_PIN => pinint0_pin.set_low(),
-                                            DynamicPin::GPIO(RTS_PIN_NUMBER) => cts.set_low(),
-                                            _ => todo!(),
+                                        match pin_number {
+                                            RED_LED_PIN_NUMBER => pinint0_pin.set_low(),
+                                            RTS_PIN_NUMBER => cts.set_low(), // TODO double-check this RTS/CTS mismatch
+                                            pin_number => {
+                                                dyn_noint_pins.lock(|pin_map|{ // TODO turn this into a macro?
+                                                    if pin_map.contains_key(&pin_number) {
+                                                        // this is a dynamic non-interrupt pin, set its level
+                                                        let pin = pin_map.get_mut(&pin_number).unwrap();
+                                                        pin.set_low()
+                                                    }
+                                                })
+                                                // TODO don't fail silently here?
+                                            },
                                         };
                                     }
                                 }
                             }
                             else {
-                                rprintln!("Warning: Can't set pin #{} since it is configured as input.",
+                                rprintln!("pin #{} is input. Ignoring.",
                                           pin.get_pin_number().unwrap() );
                             }
                             Ok(())
@@ -826,7 +861,7 @@ const APP: () = {
                                 }
                             };
 
-                            rprintln!("sending read result: {:?}", result);
+                            rprintln!("result: {:?}", result);
 
                             host_tx
                                 .send_message(
@@ -928,22 +963,19 @@ const APP: () = {
     #[task(binds = SysTick, resources = [dyn_noint_levels_in, dyn_noint_pins])]
     fn syst(context: syst::Context) {
         for (pin_number, pin) in context.resources.dyn_noint_pins.iter() {
-            if pin.direction_is_input() {
-
-                // TODO more elegantly? or add get_level to hal?
-                let level = match pin.is_high() {
-                    true => {
-                        gpio::Level::High
-                    }
-                    false => {
-                        gpio::Level::Low
-                    }
-                };
-
-                let _ = context.resources.dyn_noint_levels_in.enqueue(
-                    PinMeasurementEvent{ pin_number: *pin_number, level}
-                    );
+            // TODO more elegantly? or add get_level to hal?
+            let level = match pin.is_high() {
+                true => {
+                    gpio::Level::High
                 }
+                false => {
+                    gpio::Level::Low
+                }
+            };
+
+            let _ = context.resources.dyn_noint_levels_in.enqueue(
+                PinMeasurementEvent{ pin_number: *pin_number, level}
+                );
         }
     }
 
