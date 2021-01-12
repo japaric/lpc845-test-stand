@@ -111,8 +111,6 @@ impl<'r> TryFrom<AssistantToHost<'r>> for pin::ReadLevelResult<DynamicPin> {
     }
 }
 
-pub type PinNumber = u8;
-
 /// Specifies which mode a USART transmission uses
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub enum UsartMode {
@@ -140,6 +138,10 @@ pub enum OutputPin {
     Red,
 }
 
+/// Index of a LPC845 breakout board pinout, counted from top left counterclockwise to top right
+/// (see https://www.nxp.com/assets/images/en/block-diagrams/LPC845-BRK-BD2.png )
+pub type PinNumber = u8;
+
 /// Represents one of the pins that the assistant can (re)configure at runtime
 /// Note that the pin numbers used here correspond to the LPC845 breakout board pinouts counted
 /// from top left counterclockwise to top right
@@ -147,7 +149,8 @@ pub enum OutputPin {
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub enum DynamicPin {
     // TODO:
-    // - maybe prevent illegal pin numbers (e.g. GND/20 should not be used for GPIO)
+    // - prevent illegal pin numbers (e.g. GND/20 should not be used for GPIO)
+    // - distinguish between polled and interrupt-triggering pins
     GPIO(PinNumber),
     UART, // TODO this is just a dummy, adjust to add info needed for uart
 }

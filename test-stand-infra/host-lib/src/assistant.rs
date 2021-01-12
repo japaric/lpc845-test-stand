@@ -29,6 +29,9 @@ use crate::{
 const RTS_PIN_NUMBER: PinNumber = 18;
 const CTS_PIN_NUMBER: PinNumber = 19;
 
+// TODO tokenize instead
+static LEGAL_DYNAMIC_PINS: [PinNumber; 4] = [6, 29, 31, 33];
+
 /// A wrapper around the test-assistant for easy pin configuration.
 pub struct AssistantInterface<Assistant> {
     real_assistant: RwLock<Assistant>,
@@ -64,10 +67,11 @@ pub struct OutputPin<'assistant, Assistant> {
     assistant: &'assistant RwLock<Assistant>,
 }
 
-// TODO add docs
+/// Grants access to the test assistant in order to create dynamically reconfigurable
+/// GPIO pins used for testing.
 impl AssistantInterface<Assistant> {
+    /// Create a new AssistantInterface
     pub fn new(assistant: Assistant) -> Self {
-
         AssistantInterface {
             real_assistant: RwLock::new(assistant),
         }
@@ -79,14 +83,15 @@ impl AssistantInterface<Assistant> {
     /// number `pin_number` at test runtime.
     pub fn create_gpio_input_pin(
         &self,
-        pin_number: u8,
+        pin_number: PinNumber,
     ) -> Result<InputPin<Assistant>, AssistantError> {
-        // TODO untangle match statement below
-        // TODO add coherence check to ensure we don't
-        // - assign pins that can't be dynamic
-        // - assign more dynamic pins than possible
-        // -> and then return Err(AssistantPinOperationError::IllegalPinNumber(PinNumber))
+        // TODO use tokens to detect this at compile time
+        if !LEGAL_DYNAMIC_PINS.contains(&pin_number) {
+            print!("Error: trying to use pin that is not configurable from tests: {:?}\n", pin_number);
+            return Err(AssistantError::PinOperation(AssistantPinOperationError::IllegalPinNumber(pin_number)));
+        }
 
+        // TODO untangle match statement below
         let lock = self.real_assistant.try_write();
         // note to self: loop until we get the lock?
         if let Ok(mut assistant) = lock {
@@ -115,15 +120,16 @@ impl AssistantInterface<Assistant> {
     /// If this function returns without Error, the pin's voltage has been set to `level`.
     pub fn create_gpio_output_pin(
         &self,
-        pin_number: u8,
+        pin_number: PinNumber,
         level: pin::Level,
     ) -> Result<OutputPin<Assistant>, AssistantError> {
-        // TODO untangle match statement below
-        // TODO add coherence check to ensure we don't
-        // - assign more dynamic pins than possible
-        // - assign pins that can't be dynamic
-        // -> and then return Err(AssistantPinOperationError::IllegalPinNumber(PinNumber))
+        // TODO use tokens to detect this at compile time
+        if !LEGAL_DYNAMIC_PINS.contains(&pin_number) {
+            print!("Error: trying to use pin that is not configurable from tests: {:?}\n", pin_number);
+            return Err(AssistantError::PinOperation(AssistantPinOperationError::IllegalPinNumber(pin_number)));
+        }
 
+        // TODO untangle match statement below
         let lock = self.real_assistant.try_write();
         // note to self: loop until we get the lock?
         if let Ok(mut assistant) = lock {
@@ -221,7 +227,6 @@ impl AssistantInterface<Assistant> {
 
         Err(AssistantError::AssistantLocked)
     }
-
 
     /// Instruct assistant to send this message to the target's sync USART
     pub fn send_to_target_usart_sync(
@@ -433,7 +438,7 @@ impl Assistant {
         // make sure rts and cts have the right direction
         s.set_pin_direction_input(DynamicPin::GPIO(RTS_PIN_NUMBER))
             .unwrap();
-        // TODO double check with old code if this is the correct default direction?
+        // TODO double check with old code if this is the correct default level?
         s.set_pin_direction_output(DynamicPin::GPIO(CTS_PIN_NUMBER), pin::Level::Low)
             .unwrap();
 
