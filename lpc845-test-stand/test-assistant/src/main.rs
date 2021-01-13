@@ -215,7 +215,7 @@ const APP: () = {
             .into_dynamic_pin_2(gpio.tokens.pio1_0, gpio::Level::Low, DynamicPinDirection::Input);
         let test_dyn_pin33 = p
             .pins
-            .pio0_6 // TODO check if it still works after this change
+            .pio0_6
             .into_dynamic_pin_2(gpio.tokens.pio0_6, gpio::Level::Low, DynamicPinDirection::Input);
         let test_dyn_pin6 = p
             .pins
@@ -753,8 +753,9 @@ const APP: () = {
                             match pin.get_pin_number().unwrap() {
                                 RED_LED_PIN_NUMBER => {
                                     pinint0_pin.switch_to_output(gpio_level);
-                                    // inintialize interruptable pins so that a status read is possible before the first level
-                                    // change (TODO is this a separate PR candidate?)
+                                    // inintialize interruptable pins so that a status read is
+                                    // possible before the first level change
+                                    // (TODO is this a separate PR candidate?)
                                     let pinint0_level = match pinint0_pin.is_high() {
                                         true => pin::Level::High,
                                         false => pin::Level::Low,
@@ -864,7 +865,6 @@ const APP: () = {
             handle_pin_interrupt(pwm,   InputPin::Pwm,   &mut pins);
             handle_pin_interrupt(blue_idle, InputPin::Blue, &mut pins);
 
-            // TODO only do this for pins that are currently in input direction?
             handle_pin_interrupt_dynamic(pinint0_idle, PININT0_DYN_PIN, &mut dynamic_int_pins);
             handle_pin_interrupt_dynamic(
                 target_rts_idle,
@@ -886,7 +886,7 @@ const APP: () = {
             // spurious test failures.
             interrupt::free(|_| {
                 let should_sleep =
-                    !host_rx.can_process() && !target_rx.can_process() && pinint0_idle.is_ready(); // TODO double check for soundness
+                    !host_rx.can_process() && !target_rx.can_process() && pinint0_idle.is_ready();
 
                 if should_sleep {
                     // On LPC84x MCUs, debug mode is not supported when

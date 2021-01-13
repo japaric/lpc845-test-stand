@@ -20,14 +20,19 @@ impl<E> TimerInterrupt<E> {
         }
     }
 
-    /// TODO add docs
+
+    /// Initialize timer interrupt
+    ///
+    /// Returns
+    /// - a `spsc::Producer` intended to be filled from the interrupt context.
+    /// - an `spsc::Producer` intended to be read from a lower-priority context, for
+    ///   example the idle loop, to process events from the interrupt context.
     pub fn init(
         &mut self,
     ) -> (
         Producer<'_, E, QueueCap>,
         Consumer<'_, E, QueueCap>,
     ) {
-        // TODO init systick here?
         self.queue.split()
     }
 }

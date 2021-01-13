@@ -42,13 +42,11 @@ fn main() -> ! {
     // Select pins we want to use
     let (pio1_0, pio1_0_token) = (p.pins.pio1_0, gpio.tokens.pio1_0); // green led
     let (pio1_2, pio1_2_token) = (p.pins.pio1_2, gpio.tokens.pio1_2); // red   led
-    //let (pio0_16, pio0_16_token) = (p.pins.pio0_16, gpio.tokens.pio0_16); TODO rm if tt works
     let (pio1_1, pio1_1_token) = (p.pins.pio1_1, gpio.tokens.pio1_1); // blue led
 
     // Configure the pin directions
     let pin_31 = pio1_0.into_input_pin(pio1_0_token);
     let mut pin_29 = pio1_2.into_output_pin(pio1_2_token, Level::High); // red led off
-    //let mut pin_1 = pio0_16.into_output_pin(pio0_16_token, Level::High); TODO rm if tt works
     let mut pin_30 = pio1_1.into_output_pin(pio1_1_token, Level::High);
 
     // check / update our pins every PIN_READ_DELAY ms

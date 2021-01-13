@@ -100,7 +100,7 @@ impl AssistantInterface<Assistant> {
             match assistant.pins.remove(&pin_number) {
                 Some(mut pin) => {
                     pin.set_direction_input::<HostToAssistant>(&mut assistant.conn)
-                        .map_err(|err| AssistantError::PinOperation(AssistantPinOperationError::SetPinDirectionInputError(err)))
+                        .map_err(|err| AssistantError::PinOperation(AssistantPinOperationError::SetPinDirectionInput(err)))
                         .unwrap();
 
                     return Ok(InputPin {
@@ -138,7 +138,7 @@ impl AssistantInterface<Assistant> {
             match assistant.pins.remove(&pin_number) {
                 Some(mut pin) => {
                     pin.set_direction_output::<HostToAssistant>(level, &mut assistant.conn)
-                        .map_err(|err| AssistantError::PinOperation(AssistantPinOperationError::SetPinDirectionInputError(err)))
+                        .map_err(|err| AssistantError::PinOperation(AssistantPinOperationError::SetPinDirectionInput(err)))
                         .unwrap();
 
                     return Ok(OutputPin {
@@ -452,7 +452,7 @@ impl Assistant {
         level: pin::Level,
     ) -> Result<(), AssistantError> {
         pin.set_direction_output::<HostToAssistant>(level, &mut self.conn)
-            .map_err(|err| AssistantError::PinOperation(AssistantPinOperationError::SetPinDirectionInputError(err)))
+            .map_err(|err| AssistantError::PinOperation(AssistantPinOperationError::SetPinDirectionInput(err)))
     }
 
     // internal helper
@@ -461,7 +461,7 @@ impl Assistant {
         pin: &mut Pin<DynamicPin>,
     ) -> Result<(), AssistantError> {
         pin.set_direction_input::<HostToAssistant>(&mut self.conn)
-            .map_err(|err| AssistantError::PinOperation(AssistantPinOperationError::SetPinDirectionInputError(err)))
+            .map_err(|err| AssistantError::PinOperation(AssistantPinOperationError::SetPinDirectionInput(err)))
     }
 
     /// Make the test-assistant's pin with number `pin` an Input pin.
@@ -476,7 +476,7 @@ impl Assistant {
                 .get_mut(&pin_number)
                 .unwrap()
                 .set_direction_input::<HostToAssistant>(&mut self.conn)
-                .map_err(|err| AssistantError::PinOperation(AssistantPinOperationError::SetPinDirectionInputError(err))),
+                .map_err(|err| AssistantError::PinOperation(AssistantPinOperationError::SetPinDirectionInput(err))),
             _ => todo!(),
         }
     }
@@ -775,7 +775,6 @@ pub enum AssistantPinOperationError {
     /// This pin cannot be configured, for example because it is reserved for internal use
     /// Or has already been created earlier
     IllegalPinNumber(PinNumber),
-    SetPinDirectionInputError(ConnSendError), // TODO rm Error from name
+    SetPinDirectionInput(ConnSendError),
     SetPinDirectionOutput(ConnSendError),
-    ReadPinError(ReadLevelError), // TODO rm Error from name. TODO is this even ever used? diff to PinRead()??
 }
