@@ -688,8 +688,8 @@ const APP: () = {
                         HostToAssistant::SetDirection(
                             pin::SetDirection {
                                 pin,
-                                direction: pin::Direction::Input,
-                                level: None,
+                                direction,
+                                level,
                             }
                         ) => {
                             //rprintln!("{:?} is Input", pin);
@@ -743,7 +743,7 @@ const APP: () = {
                         ) => {
                             //rprintln!("{:?} is Output | Level {:?}", pin, level);
                             // convert from lpc8xx_hal::gpio::Level to protocol::pin::Level
-                            // TODO impl From instead?
+                            // TODO use into() here
                             let gpio_level = match level {
                                 pin::Level::High => {gpio::Level::High}
                                 pin::Level::Low => {gpio::Level::Low}
@@ -825,15 +825,9 @@ const APP: () = {
                                     dynamic_noint_pins
                                     .get(&(pin_number as usize))
                                     .map(|gpio_level| {
-                                        // TODO impl From instead?
-                                        let level = match gpio_level {
-                                            gpio::Level::High => pin::Level::High,
-                                            gpio::Level::Low => pin::Level::Low,
-                                        };
-
                                         pin::ReadLevelResult {
                                             pin,
-                                            level,
+                                            level: pin::Level::from(*gpio_level),
                                             period_ms: None,
                                         }
                                     })
@@ -1040,11 +1034,8 @@ fn handle_pin_interrupt_dynamic(
         match event {
             pin_interrupt::Event { level, period } => {
                 let pin_number = pin.get_pin_number().unwrap();
-
-                let level = match level {
-                    gpio::Level::High => pin::Level::High,
-                    gpio::Level::Low => pin::Level::Low,
-                };
+                // convert from hal level to our level
+                let level = pin::Level::from(level);
 
                 let period_ms = period.map(|value| value / 12_000);
                 pins.insert(pin_number as usize, (level, period_ms))
@@ -1079,10 +1070,8 @@ fn handle_pin_interrupt(
     while let Some(event) = int.next() {
         match event {
             pin_interrupt::Event { level, period } => {
-                let level = match level {
-                    gpio::Level::High => pin::Level::High,
-                    gpio::Level::Low => pin::Level::Low,
-                };
+                // convert from hal level to our level
+                let level = pin::Level::from(level);
 
                 let period_ms = period.map(|value| value / 12_000);
                 pins.insert(pin as usize, (level, period_ms)).unwrap();

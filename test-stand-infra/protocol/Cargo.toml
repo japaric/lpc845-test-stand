@@ -8,3 +8,8 @@ edition = "2018"
 version          = "1.0.115"
 default-features = false
 features         = ["derive"]
+
+[dependencies.lpc8xx-hal]
+#git      = "https://github.com/lpc-rs/lpc8xx-hal.git"
+path     = "../../../lpc8xx-hal"
+features = ["845"]

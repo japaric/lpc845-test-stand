@@ -9,6 +9,7 @@ use serde::{
     Serialize,
 };
 
+use lpc8xx_hal::gpio;
 
 /// Sent by the host to command a test node to set a pin to a specific level
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, Eq, PartialEq)]
@@ -66,6 +67,15 @@ pub enum Level {
     High,
     /// Low voltage
     Low,
+}
+
+impl From<gpio::Level> for Level {
+    fn from(level: gpio::Level) -> Self {
+        match level {
+            gpio::Level::High => Level::High,
+            gpio::Level::Low => Level::Low,
+        }
+    }
 }
 
 /// Represents the direction of a pin
