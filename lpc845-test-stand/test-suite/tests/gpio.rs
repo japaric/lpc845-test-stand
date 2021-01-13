@@ -81,6 +81,23 @@ fn target_should_read_input_level() -> Result {
 
     Ok(())
 }
+/// This is a regression test:
+/// Previously, interruptable pins could only be read successfully after the first
+/// interrupt was triggered by a level change. This test ensures that this bug stays fixed.
+#[test]
+fn assistant_should_read_level_without_level_change_interruptable_out_pin() -> Result {
+    let interruptable_pin = RED_LED_PIN;
+
+    // check init low
+    let test_stand = TestStand::new()?;
+    let mut out_pin = test_stand
+        .assistant
+        .create_gpio_output_pin(interruptable_pin, Level::High)?;
+
+    assert!(out_pin.is_high()?);
+
+    Ok(())
+}
 
 #[test]
 fn assistant_should_read_level_repeatedly_interruptable_pin() -> Result {
@@ -90,10 +107,7 @@ fn assistant_should_read_level_repeatedly_interruptable_pin() -> Result {
     let test_stand = TestStand::new()?;
     let mut out_pin = test_stand
         .assistant
-        .create_gpio_output_pin(interruptable_pin, Level::Low)?;
-
-    // FIXME currently an explicit level change is required after init to "activate" the pin
-    out_pin.set_high()?;
+        .create_gpio_output_pin(interruptable_pin, Level::High)?;
 
     // RUN TEST
     assert!(out_pin.is_high()?);
@@ -134,10 +148,9 @@ fn assistant_should_read_level_repeatedly_polled_pin() -> Result {
     Ok(())
 }
 
-/**
- * Ensure that pins which trigger an interrupt on change return the correct level
- * immediately, no wait period required.
- */
+
+/// Ensure that pins which trigger an interrupt on change return the correct level
+/// immediately, no wait period required.
 #[test]
 fn assistant_should_return_interruptable_pin_status_immediately() -> Result {
     /*

@@ -164,7 +164,6 @@ const APP: () = {
         static mut RTS:  PinInterrupt = PinInterrupt::new();
         static mut PWM:  PinInterrupt = PinInterrupt::new();
 
-        // TODO do this for all dyn pins
         static mut PIN_TIMERINT: TimerInterrupt<PinMeasurementEvent> = TimerInterrupt::new();
 
         rtt_target::rtt_init_print!();
@@ -191,7 +190,6 @@ const APP: () = {
         systick.enable_counter();
 
         // Configure interrupts for pins that could be connected to target's GPIO pins
-        // TODO more elegantly: make all pins dynamic, interruptable
         let pinint0_pin = p.pins.pio1_2.into_dynamic_pin(
             gpio.tokens.pio1_2,
             gpio::Level::High, // off by default
@@ -655,6 +653,7 @@ const APP: () = {
                                                     pin::Level::Low => { pin.set_low() }
                                                 }
                                             }
+                                            // TODO add pin level to buffer right away
                                         }
                                         else {
                                             rprintln!("can't query unsupported pin: {:?}", pin_number);
@@ -696,7 +695,17 @@ const APP: () = {
                             //rprintln!("{:?} is Input", pin);
 
                             match pin.get_pin_number().unwrap() {
-                                RED_LED_PIN_NUMBER => pinint0_pin.switch_to_input(),
+                                RED_LED_PIN_NUMBER => {
+                                    pinint0_pin.switch_to_input();
+                                    // inintialize interruptable pins so that a status read is possible before the first level
+                                    // change (TODO is this a separate PR candidate?)
+                                    let pinint0_level = match pinint0_pin.is_high() {
+                                        true => pin::Level::High,
+                                        false => pin::Level::Low,
+                                    };
+                                    dynamic_int_pins.insert(RED_LED_PIN_NUMBER as usize, (pinint0_level, None))
+                                                    .unwrap();
+                                },
                                 CTS_PIN_NUMBER => {
                                     // TODO proper error handling
                                     rprintln!("CTS pin is never Input");
@@ -742,7 +751,17 @@ const APP: () = {
 
                             // todo nicer and more generic once we start enabling ALL the pins
                             match pin.get_pin_number().unwrap() {
-                                RED_LED_PIN_NUMBER => pinint0_pin.switch_to_output(gpio_level),
+                                RED_LED_PIN_NUMBER => {
+                                    pinint0_pin.switch_to_output(gpio_level);
+                                    // inintialize interruptable pins so that a status read is possible before the first level
+                                    // change (TODO is this a separate PR candidate?)
+                                    let pinint0_level = match pinint0_pin.is_high() {
+                                        true => pin::Level::High,
+                                        false => pin::Level::Low,
+                                    };
+                                    dynamic_int_pins.insert(RED_LED_PIN_NUMBER as usize, (pinint0_level, None))
+                                                    .unwrap();
+                                },
                                 CTS_PIN_NUMBER => cts.switch_to_output(gpio_level),
                                 RTS_PIN_NUMBER => {
                                     // TODO proper error handling
@@ -832,8 +851,6 @@ const APP: () = {
                                 }
                             };
 
-                            //rprintln!("result: {:?}", result);
-
                             host_tx
                                 .send_message(
                                     &AssistantToHost::ReadPinResultDynamic(result),
@@ -849,7 +866,10 @@ const APP: () = {
                 .expect("Error processing host request");
             host_rx.clear_buf();
 
+            // TODO: is pwm pin ever handled in reading messages?
             handle_pin_interrupt(pwm,   InputPin::Pwm,   &mut pins);
+            handle_pin_interrupt(blue_idle, InputPin::Blue, &mut pins);
+
             // TODO only do this for pins that are currently in input direction?
             handle_pin_interrupt_dynamic(pinint0_idle, PININT0_DYN_PIN, &mut dynamic_int_pins);
             handle_pin_interrupt_dynamic(
@@ -858,7 +878,6 @@ const APP: () = {
                 &mut dynamic_int_pins,
             );
             handle_pin_interrupt_noint_dynamic(dyn_noint_levels_out, &mut dynamic_noint_pins);
-            handle_pin_interrupt(blue_idle, InputPin::Blue, &mut pins);
 
             // We need this critical section to protect against a race
             // conditions with the interrupt handlers. Otherwise, the following
