@@ -777,7 +777,7 @@ const APP: () = {
                         HostToAssistant::ReadDynamicPin(
                             pin::ReadLevel { pin }
                         ) => {
-                            rprintln!("READ DYNAMIC PIN {:?}", pin);
+                            //rprintln!("READ DYNAMIC PIN {:?}", pin);
 
                             let pin_number = pin.get_pin_number().unwrap();
 
@@ -832,7 +832,7 @@ const APP: () = {
                                 }
                             };
 
-                            rprintln!("result: {:?}", result);
+                            //rprintln!("result: {:?}", result);
 
                             host_tx
                                 .send_message(
