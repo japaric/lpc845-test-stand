@@ -688,8 +688,8 @@ const APP: () = {
                         HostToAssistant::SetDirection(
                             pin::SetDirection {
                                 pin,
-                                direction,
-                                level,
+                                direction: pin::Direction::Input,
+                                level: None,
                             }
                         ) => {
                             //rprintln!("{:?} is Input", pin);
