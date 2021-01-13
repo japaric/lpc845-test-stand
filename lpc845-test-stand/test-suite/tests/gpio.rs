@@ -13,7 +13,7 @@ use lpc845_test_suite::{Result, TestStand};
 const RED_LED_PIN: PinNumber = 29;
 const GRN_LED_PIN: PinNumber = 31;
 
-const PIN_WAIT_TIME: u64 = 200;
+const PIN_WAIT_TIME: u64 = 300;
 
 #[test]
 fn assistant_should_change_and_read_noint_dyn_pin() -> Result {
