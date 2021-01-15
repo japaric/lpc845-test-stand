@@ -6,8 +6,8 @@
 use std::thread::sleep;
 use std::time;
 
-use lpc845_messages::{pin::Level, PinNumber};
 use host_lib::assistant::{Assistant, InputPin, LEGAL_DYNAMIC_PINS};
+use lpc845_messages::{pin::Level, PinNumber};
 use lpc845_test_suite::{Result, TestStand};
 
 const RED_LED_PIN: PinNumber = 29;
@@ -19,23 +19,27 @@ const PIN_WAIT_TIME: u64 = 300;
 fn assistant_should_change_and_read_noint_dyn_pin() -> Result {
     // SETUP
     let mut test_stand = TestStand::new()?;
+    let mut target = test_stand
+        .target
+        .take()
+        .expect("target likely not configured in test-stand.toml");
+    let assistant = test_stand.assistant;
+
     // NOTE: The assistant's green led pin is a noint dyn pin, i.e. a dynamic pin that's read
     // by polling rather than by interrupt
     let pin_number = GRN_LED_PIN;
     // check if direction setting works in both directions
-    let out_pin = test_stand
-        .assistant
-        .create_gpio_output_pin(pin_number, Level::Low)?;
+    let out_pin = assistant.create_gpio_output_pin(pin_number, Level::Low)?;
     let mut in_pin = out_pin.into_input_pin()?;
 
     // TEST & ASSERT POSTCONDITION
-    test_stand.target.set_pin_low()?;
+    target.set_pin_low()?;
     // ensure we don't read before the next timer tick
     sleep(time::Duration::from_millis(PIN_WAIT_TIME));
     assert!(in_pin.is_low()?);
 
     // TEST & ASSERT POSTCONDITION
-    test_stand.target.set_pin_high()?;
+    target.set_pin_high()?;
     // ensure we don't read before the next timer tick
     sleep(time::Duration::from_millis(PIN_WAIT_TIME));
     assert!(in_pin.is_high()?);
@@ -47,16 +51,21 @@ fn assistant_should_change_and_read_noint_dyn_pin() -> Result {
 fn target_should_set_pin_level() -> Result {
     // SETUP
     let mut test_stand = TestStand::new()?;
-    let mut in_pin = test_stand.assistant.create_gpio_input_pin(GRN_LED_PIN)?;
+    let mut target = test_stand
+        .target
+        .take()
+        .expect("target likely not configured in test-stand.toml");
+    let assistant = test_stand.assistant;
+    let mut in_pin = assistant.create_gpio_input_pin(GRN_LED_PIN)?;
 
     // TEST & ASSERT POSTCONDITION
-    test_stand.target.set_pin_low()?;
+    target.set_pin_low()?;
     // green is a dynamic noint pin; ensure we don't read before the next timer tick
     sleep(time::Duration::from_millis(PIN_WAIT_TIME));
     assert!(in_pin.is_low()?);
 
     // TEST & ASSERT POSTCONDITION
-    test_stand.target.set_pin_high()?;
+    target.set_pin_high()?;
     // green is a dynamic noint pin; ensure we don't read before the next timer tick
     sleep(time::Duration::from_millis(PIN_WAIT_TIME));
     assert!(in_pin.is_high()?);
@@ -68,16 +77,20 @@ fn target_should_set_pin_level() -> Result {
 fn target_should_read_input_level() -> Result {
     // SETUP
     let mut test_stand = TestStand::new()?;
+    let mut target = test_stand
+        .target
+        .take()
+        .expect("target likely not configured in test-stand.toml");
     let mut out_pin = test_stand
         .assistant
         .create_gpio_output_pin(RED_LED_PIN, Level::Low)?;
 
     // RUN TEST
     out_pin.set_low()?;
-    assert!(test_stand.target.pin_is_low()?);
+    assert!(target.pin_is_low()?);
 
     out_pin.set_high()?;
-    assert!(test_stand.target.pin_is_high()?);
+    assert!(target.pin_is_high()?);
 
     Ok(())
 }
@@ -124,22 +137,23 @@ fn assistant_should_read_level_repeatedly_interruptable_pin() -> Result {
 
 #[test]
 fn assistant_should_read_level_repeatedly_polled_pin() -> Result {
-
     // SETUP
     let mut test_stand = TestStand::new()?;
-    let mut in_pin = test_stand
-        .assistant
-        .create_gpio_input_pin(GRN_LED_PIN)?;
+    let mut target = test_stand
+        .target
+        .take()
+        .expect("target likely not configured in test-stand.toml");
+    let mut in_pin = test_stand.assistant.create_gpio_input_pin(GRN_LED_PIN)?;
 
     // RUN TEST & ASSERT POSTCONDITION
-    test_stand.target.set_pin_low()?;
+    target.set_pin_low()?;
     // green is a dynamic noint pin; ensure we don't read before the next timer tick
     sleep(time::Duration::from_millis(PIN_WAIT_TIME));
     assert!(in_pin.is_low()?);
     assert!(in_pin.is_low()?);
 
     // TEST & ASSERT POSTCONDITION
-    test_stand.target.set_pin_high()?;
+    target.set_pin_high()?;
     // green is a dynamic noint pin; ensure we don't read before the next timer tick
     sleep(time::Duration::from_millis(PIN_WAIT_TIME));
     assert!(in_pin.is_high()?);
@@ -147,7 +161,6 @@ fn assistant_should_read_level_repeatedly_polled_pin() -> Result {
 
     Ok(())
 }
-
 
 /// Ensure that pins which trigger an interrupt on change return the correct level
 /// immediately, no wait period required.
@@ -177,10 +190,8 @@ fn assistant_should_return_interruptable_pin_status_immediately() -> Result {
     Ok(())
 }
 
-
 #[test]
 fn assistant_all_dyn_gpio_pins_should_work() -> Result {
-
     let test_stand = TestStand::new()?;
 
     for pin in &LEGAL_DYNAMIC_PINS {
@@ -232,17 +243,21 @@ fn assistant_red_led_should_be_toggleable_by_pin_direction() -> Result {
 fn wonky_in_out_conversion_should_work() -> Result {
     // SETUP
     let mut test_stand = TestStand::new()?;
+    let mut target = test_stand
+        .target
+        .take()
+        .expect("target likely not configured in test-stand.toml");
     // ensure pin is low (-> red led is on) when we start
     let mut out_pin = test_stand
         .assistant
         .create_gpio_output_pin(RED_LED_PIN, Level::Low)?;
-    assert!(test_stand.target.pin_is_low()?);
+    assert!(target.pin_is_low()?);
 
     let in_pin = out_pin.into_input_pin()?;
     sleep(time::Duration::from_secs(2));
 
     out_pin = in_pin.into_output_pin(Level::High)?;
-    assert!(test_stand.target.pin_is_high()?);
+    assert!(target.pin_is_high()?);
 
     Ok(())
 }

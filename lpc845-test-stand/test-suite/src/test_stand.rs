@@ -14,7 +14,7 @@ use super::target::Target;
 pub struct TestStand {
     _guard: LockResult<MutexGuard<'static, ()>>,
 
-    pub target: Target,
+    pub target: Option<Target>,
     pub assistant: AssistantInterface<Assistant>,
 }
 
@@ -28,9 +28,18 @@ impl TestStand {
         let test_stand =
             host_lib::TestStand::new().map_err(|err| TestStandInitError::Inner(err))?;
 
+        let target = match test_stand.target {
+            Ok(conn) => { Some(Target::new(conn)) }
+            Err(_) => {
+                println!("Could not configure target. Assuming that no target is set in `test-stand.toml`
+                          and an extranal target is being used.");
+                          None
+            }
+        };
+
         Ok(Self {
             _guard: test_stand.guard,
-            target: Target::new(test_stand.target?),
+            target: target,
             assistant: AssistantInterface::new(test_stand.assistant?),
         })
     }
